@@ -425,14 +425,21 @@ bmdc.pic.size.df$Comparison <- factor(bmdc.pic.size.df$Comparison,
 #################
 ### plotting ####
 #################
+## LPS ##
+#########
+bmdc.lps.size.box <- ggplot(bmdc.lps.size.df[bmdc.lps.size.df$Comparison %in% c("0v1", "1v2"), ],
+                            aes(x=Comparison, y=CGI_SIZE.kb, fill=Comparison)) +
+  geom_boxplot() +
+  theme_mike() +
+  scale_fill_manual(values=c("#D86200", "#D8AA00")) +
+  theme(axis.text=element_text(size=16), axis.title.x=element_blank()) +
+  guides(fill=FALSE) +
+  labs(y="CpG island Size (kb)", x="Time Comparison") +
+  scale_y_continuous(limits=c(0, 3), oob=censor)
 
-bmdc.lps.size.box <- ggplot(bmdc.lps.size.df, aes(x=Comparison, y=CGI_SIZE.kb, fill=Comparison)) +
-  geom_boxplot() + theme_mike() +
-  scale_fill_Publication() +
-  guides(fill=guide_legend(title="Time Comparison")) +
-  theme(legend.title=element_text(size=12), legend.text=element_text(size=10)) +
-  labs(x="DE Comparison", y="CGI Size (kb)", title="LPS stimulation")
-
+ggsave(bmdc.lps.size.box,
+       filename="~/Dropbox/Noise_genomics/Figures/ms_figures/BMDC_LPS-CGIsize_boxplot.png",
+       height=4.25, width=3.25, dpi=300)
 
 bmdc.lps.size.dens <- ggplot(bmdc.lps.size.df[bmdc.lps.size.df$Comparison %in% c("0v1", "1v2"), ],
                               aes(x=CGI_SIZE.kb, colour=Comparison)) +
@@ -449,17 +456,28 @@ bmdc.lps.size.dens <- ggplot(bmdc.lps.size.df[bmdc.lps.size.df$Comparison %in% c
                    x=median(bmdc.lps.size.df$CGI_SIZE.kb[bmdc.lps.size.df$Comparison == "1v2"]),
                    xend=median(bmdc.lps.size.df$CGI_SIZE.kb[bmdc.lps.size.df$Comparison == "1v2"])),
                linetype="dashed", colour="#D8AA00", size=2) +
-  scale_x_continuous(limits=c(0, 2), oob=squish)
+  scale_x_continuous(limits=c(0, 3), oob=censor)
 
 ggsave(bmdc.lps.size.dens,
        filename="~/Dropbox/Noise_genomics/Figures/ms_figures/BMDC_LPS-CGIsize_density.png",
        height=4.25, width=4.75, dpi=300)
 
-bmdc.pam.size.box <- ggplot(bmdc.pam.size.df, aes(x=Comparison, y=CGI_SIZE.kb, fill=Comparison)) +
-  geom_boxplot() + theme_mike() +
-  scale_fill_Publication() +
-  theme(legend.title=element_text(size=12), legend.text=element_text(size=10)) +
-  labs(x="DE Comparison", y="CGI Size (kb)", title="PAM stimulation")
+## PAM ##
+#########
+
+bmdc.pam.size.box <- ggplot(bmdc.pam.size.df[bmdc.pam.size.df$Comparison %in% c("0v1", "1v2"), ],
+                            aes(x=Comparison, y=CGI_SIZE.kb, fill=Comparison)) +
+  geom_boxplot() +
+  theme_mike() +
+  scale_fill_manual(values=c("#D86200", "#D8AA00")) +
+  theme(axis.text=element_text(size=16), axis.title.x=element_blank()) +
+  guides(fill=FALSE) +
+  labs(y="CpG island Size (kb)", x="Time Comparison") +
+  scale_y_continuous(limits=c(0, 3), oob=censor)
+
+ggsave(bmdc.pam.size.box,
+       filename="~/Dropbox/Noise_genomics/Figures/ms_figures/BMDC_PAM-CGIsize_boxplot.png",
+       height=4.25, width=3.25, dpi=300)
 
 bmdc.pam.size.dens <- ggplot(bmdc.pam.size.df[bmdc.pam.size.df$Comparison %in% c("0v1", "1v2"), ],
                              aes(x=CGI_SIZE.kb, colour=Comparison)) +
@@ -476,18 +494,27 @@ bmdc.pam.size.dens <- ggplot(bmdc.pam.size.df[bmdc.pam.size.df$Comparison %in% c
                    x=median(bmdc.lps.size.df$CGI_SIZE.kb[bmdc.pam.size.df$Comparison == "1v2"]),
                    xend=median(bmdc.lps.size.df$CGI_SIZE.kb[bmdc.pam.size.df$Comparison == "1v2"])),
                linetype="dashed", colour="#D8AA00", size=2) +
-  scale_x_continuous(limits=c(0, 2), oob=squish)
+  scale_x_continuous(limits=c(0, 3), oob=censor)
 
 ggsave(bmdc.pam.size.dens,
        filename="~/Dropbox/Noise_genomics/Figures/ms_figures/BMDC_PAM-CGIsize_density.png",
        height=4.25, width=4.75, dpi=300)
 
-bmdc.pic.size.box <- ggplot(bmdc.pic.size.df, aes(x=Comparison, y=CGI_SIZE.kb, fill=Comparison)) +
-  geom_boxplot() + theme_mike() +
-  scale_fill_Publication() +
-  theme(legend.title=element_text(size=12), legend.text=element_text(size=10)) +
-  labs(x="DE Comparison", y="CGI Size (kb)", title="PIC stimulation")
+## PIC ##
+#########
+bmdc.pic.size.box <- ggplot(bmdc.pic.size.df[bmdc.pic.size.df$Comparison %in% c("0v1", "1v2"), ],
+                            aes(x=Comparison, y=CGI_SIZE.kb, fill=Comparison)) +
+  geom_boxplot() +
+  theme_mike() +
+  scale_fill_manual(values=c("#D86200", "#D8AA00")) +
+  theme(axis.text=element_text(size=16), axis.title.x=element_blank()) +
+  guides(fill=FALSE) +
+  labs(y="CpG island Size (kb)", x="Time Comparison") +
+  scale_y_continuous(limits=c(0, 3), oob=censor)
 
+ggsave(bmdc.pic.size.box,
+       filename="~/Dropbox/Noise_genomics/Figures/ms_figures/BMDC_PIC-CGIsize_boxplot.png",
+       height=4.25, width=3.25, dpi=300)
 bmdc.pic.size.dens <- ggplot(bmdc.pic.size.df[bmdc.pic.size.df$Comparison %in% c("0v1", "1v2"), ],
                              aes(x=CGI_SIZE.kb, colour=Comparison)) +
   geom_density(size=2, alpha=0.5) + theme_mike() +
@@ -503,7 +530,7 @@ bmdc.pic.size.dens <- ggplot(bmdc.pic.size.df[bmdc.pic.size.df$Comparison %in% c
                    x=median(bmdc.pic.size.df$CGI_SIZE.kb[bmdc.pic.size.df$Comparison == "1v2"]),
                    xend=median(bmdc.pic.size.df$CGI_SIZE.kb[bmdc.pic.size.df$Comparison == "1v2"])),
                linetype="dashed", colour="#D8AA00", size=2) +
-  scale_x_continuous(limits=c(0, 2), oob=squish)
+  scale_x_continuous(limits=c(0, 3), oob=censor)
 
 ggsave(bmdc.pic.size.dens,
        filename="~/Dropbox/Noise_genomics/Figures/ms_figures/BMDC_PIC-CGIsize_density.png",
