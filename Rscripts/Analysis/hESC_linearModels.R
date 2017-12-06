@@ -29,7 +29,7 @@ hesc.var.names <- hesc.var.names[!grepl(hesc.var.names, pattern="(NMI)|(CGI_SIZE
 
 for(x in seq_along(hesc.var.names)){
   .variable <- paste(hesc.var.names[x], sep=" + ")
-  .glm.form <- as.formula(paste("Alpha_r", .variable, sep=" ~ "))
+  .glm.form <- as.formula(paste("Residual.CV2", .variable, sep=" ~ "))
   
   m.rlm <- rlm(.glm.form, data=hesc.match)
   m.robust <- summary(m.rlm)
@@ -63,6 +63,9 @@ hesc.rlm.df$Predictor[hesc.rlm.df$Predictor == "EXON_COUNT"] <- "Number of exons
 hesc.rlm.df$Predictor[hesc.rlm.df$Predictor == "EXON_TOTLENGTH"] <- "Transcript length"
 hesc.rlm.df$Predictor[hesc.rlm.df$Predictor == "EXON_VARLENGTH"] <- "Exon length variance"
 
+hesc.rlm.df$Tissue <- "ESC"
+hesc.rlm.df$Species <- "Human"
+
 univar.plot <- ggplot(hesc.rlm.df,
                       aes(x=reorder(Predictor, -STAT),
                           y=STAT, fill=Direction)) +
@@ -86,7 +89,7 @@ hesc.genomic.vars <- paste(c("Mean",
                              hesc.var.names),
                            collapse=" + ")
 
-hesc.glm.form <- as.formula(paste("Alpha_r",
+hesc.glm.form <- as.formula(paste("Residual.CV2",
                                   hesc.genomic.vars, sep=" ~ "))
 
 hesc.rlm <- rlm(hesc.glm.form, data=hesc.match)
@@ -174,7 +177,7 @@ hesc.match$CpGisland <- factor(hesc.match$N_CpG,
 cpg.cols <- c("#027E00", "#00DDEC")
 names(cpg.cols) <- levels(hesc.match$CpGisland)
 
-tc_cpg <- ggplot(hesc.match, aes(x=CpGisland, y=Alpha_r, colour=CpGisland)) + 
+tc_cpg <- ggplot(hesc.match, aes(x=CpGisland, y=Residual.CV2, colour=CpGisland)) + 
   theme_mike() + 
   geom_jitter(position=position_jitterdodge(jitter.height=0,
                                             jitter.width=1.5),

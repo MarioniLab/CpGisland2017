@@ -1,7 +1,7 @@
 source("~/Dropbox/R_sessions/Noise/mESC_chromHMM.R")
 source("~/Dropbox/R_sessions/Noise/genomic_noise_features.R")
 source("~/Dropbox/R_sessions/Noise/mouse_liver_noise_features.R")
-
+library(MASS)
 library(ggplot2)
 source("~/Dropbox/R_sessions/GGMike/theme_mike.R")
 
@@ -14,6 +14,7 @@ liver.genomic.vars <- paste(c("Mean",
 
 liver.match <- merge(liver.gene.summary, genomic.features,
                     by='GENE')
+
 #########################################
 ## univariate robust linear regression ##
 #########################################
@@ -27,7 +28,7 @@ liver.var.names <- liver.var.names[!grepl(liver.var.names, pattern="(NMI)|(CGI_S
 
 for(x in seq_along(liver.var.names)){
   .variable <- paste(liver.var.names[x], sep=" + ")
-  .glm.form <- as.formula(paste("Alpha_r", .variable, sep=" ~ "))
+  .glm.form <- as.formula(paste("Residual.CV2", .variable, sep=" ~ "))
   
   m.rlm <- rlm(.glm.form, data=liver.match)
   m.robust <- summary(m.rlm)
@@ -61,6 +62,9 @@ liver.rlm.df$Predictor[liver.rlm.df$Predictor == "EXON_COUNT"] <- "Number of exo
 liver.rlm.df$Predictor[liver.rlm.df$Predictor == "EXON_TOTLENGTH"] <- "Transcript length"
 liver.rlm.df$Predictor[liver.rlm.df$Predictor == "EXON_VARLENGTH"] <- "Exon length variance"
 
+liver.rlm.df$Tissue <- "Liver"
+liver.rlm.df$Species <- "Mouse"
+
 univar.plot <- ggplot(liver.rlm.df,
                       aes(x=reorder(Predictor, -STAT),
                           y=STAT, fill=Direction)) +
@@ -76,12 +80,11 @@ ggsave(univar.plot,
        filename="~/Dropbox/Noise_genomics/Figures/ms_figures/mouse-liver_univariateLM.png",
        height=4.75, width=6.75, dpi=300)
 
-
 ###########################################
 ## multivariate robust linear regression ##
 ###########################################
 
-liver.glm.form <- as.formula(paste("Alpha_r",
+liver.glm.form <- as.formula(paste("Residual.CV2",
                                   liver.genomic.vars, sep=" ~ "))
 
 liver.rlm <- rlm(liver.glm.form, data=liver.match)
@@ -168,14 +171,14 @@ liver.match$CpGisland <- factor(liver.match$N_CpG,
 cpg.cols <- c("#027E00", "#00DDEC")
 names(cpg.cols) <- levels(liver.match$CpGisland)
 
-tc_cpg <- ggplot(liver.match, aes(x=CpGisland, y=Alpha_r, colour=CpGisland)) + 
+tc_cpg <- ggplot(liver.match, aes(x=CpGisland, y=Residual.CV2, colour=CpGisland)) + 
   theme_mike() + 
   geom_jitter(position=position_jitterdodge(jitter.height=0,
                                             jitter.width=1.5),
               alpha=0.7) +
   geom_boxplot(width=0.5, fill='white', colour='black') +
   scale_colour_manual(values=cpg.cols) +
-  labs(x="Overlapping CpG island", y=expression(paste(alpha["r"], " Overdispersion"))) +
+  labs(x="Overlapping CpG island", y=expression(paste("Residual CV"^2))) +
   guides(colour=FALSE)
 
 ggsave(tc_cpg,

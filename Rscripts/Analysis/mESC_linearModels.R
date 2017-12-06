@@ -27,7 +27,7 @@ mesc.var.names <- mesc.var.names[!grepl(mesc.var.names, pattern="(NMI)|(CGI_SIZE
 
 for(x in seq_along(mesc.var.names)){
   .variable <- paste(mesc.var.names[x], sep=" + ")
-  .glm.form <- as.formula(paste("Alpha_r", .variable, sep=" ~ "))
+  .glm.form <- as.formula(paste("Residual.CV2", .variable, sep=" ~ "))
 
   m.rlm <- rlm(.glm.form, data=mesc.match)
   m.robust <- summary(m.rlm)
@@ -61,6 +61,9 @@ mesc.rlm.df$Predictor[mesc.rlm.df$Predictor == "EXON_COUNT"] <- "Number of exons
 mesc.rlm.df$Predictor[mesc.rlm.df$Predictor == "EXON_TOTLENGTH"] <- "Transcript length"
 mesc.rlm.df$Predictor[mesc.rlm.df$Predictor == "EXON_VARLENGTH"] <- "Exon length variance"
 
+mesc.rlm.df$Tissue <- "ESC"
+mesc.rlm.df$Species <- "Mouse"
+
 univar.plot <- ggplot(mesc.rlm.df,
                         aes(x=reorder(Predictor, -STAT),
                             y=STAT, fill=Direction)) +
@@ -81,7 +84,7 @@ ggsave(univar.plot,
 ## multivariate robust linear regression ##
 ###########################################
 
-mesc.glm.form <- as.formula(paste("Alpha_r",
+mesc.glm.form <- as.formula(paste("Residual.CV2",
                                   mesc.genomic.vars, sep=" ~ "))
 
 mesc.rlm <- rlm(mesc.glm.form, data=mesc.match)
@@ -171,14 +174,14 @@ mesc.match$CpGisland <- factor(mesc.match$N_CpG,
 cpg.cols <- c("#027E00", "#00DDEC")
 names(cpg.cols) <- levels(mesc.match$CpGisland)
 
-tc_cpg <- ggplot(mesc.match, aes(x=CpGisland, y=Alpha_r, colour=CpGisland)) + 
+tc_cpg <- ggplot(mesc.match, aes(x=CpGisland, y=Residual.CV2, colour=CpGisland)) + 
   theme_mike() + 
   geom_jitter(position=position_jitterdodge(jitter.height=0,
                                             jitter.width=1.5),
               alpha=0.7) +
   geom_boxplot(width=0.5, fill='white', colour='black') +
   scale_colour_manual(values=cpg.cols) +
-  labs(x="Overlapping CpG island", y=expression(paste(alpha["r"], " Overdispersion"))) +
+  labs(x="Overlapping CpG island", y=expression(paste("Residual CV"^2))) +
   guides(colour=FALSE)
 
 ggsave(tc_cpg,

@@ -1,25 +1,26 @@
 library(ggplot2)
+library(scales)
 source("~/Dropbox/R_sessions/GGMike/theme_mike.R")
 
 # read in mouse data
-mouse.esc <- read.table("~/Dropbox/Noise_genomics/Model_results/mouse_ESC_multivariateRLM.tsv",
+mouse.esc <- read.table("~/Dropbox/Noise_genomics/Model_results/mouse_ESC_CGI-multivariateRLM.tsv",
                         h=TRUE, sep="\t", stringsAsFactors=FALSE)
 
-mouse.tcell <- read.table("~/Dropbox/Noise_genomics/Model_results/mouse_Tcell_multivariateRLM.tsv",
-                        h=TRUE, sep="\t", stringsAsFactors=FALSE)
+mouse.tcell <- read.table("~/Dropbox/Noise_genomics/Model_results/mouse_Tcell_CGI-multivariateRLM.tsv",
+                          h=TRUE, sep="\t", stringsAsFactors=FALSE)
 
-# mouse.liver <- read.table("~/Dropbox/Noise_genomics/Model_results/mouse_liver_multivariateRLM.tsv",
-#                         h=TRUE, sep="\t", stringsAsFactors=FALSE)
+# mouse.liver <- read.table("~/Dropbox/Noise_genomics/Model_results/mouse_liver_CGI-multivariateRLM.tsv",
+#                           h=TRUE, sep="\t", stringsAsFactors=FALSE)
 
 # read in human data
-human.alpha <- read.table("~/Dropbox/Noise_genomics/Model_results/human_AlphaIslet_multivariateRLM.tsv",
+human.alpha <- read.table("~/Dropbox/Noise_genomics/Model_results/human_AlphaIslet_CGI-multivariateRLM.tsv",
                           h=TRUE, sep="\t", stringsAsFactors=FALSE)
 
-human.beta <- read.table("~/Dropbox/Noise_genomics/Model_results/human_BetaIslet_multivariateRLM.tsv",
-                          h=TRUE, sep="\t", stringsAsFactors=FALSE)
+human.beta <- read.table("~/Dropbox/Noise_genomics/Model_results/human_BetaIslet_CGI-multivariateRLM.tsv",
+                         h=TRUE, sep="\t", stringsAsFactors=FALSE)
 
-human.esc <- read.table("~/Dropbox/Noise_genomics/Model_results/human_ESC_multivariateRLM.tsv",
-                          h=TRUE, sep="\t", stringsAsFactors=FALSE)
+human.esc <- read.table("~/Dropbox/Noise_genomics/Model_results/human_ESC_CGI-multivariateRLM.tsv",
+                        h=TRUE, sep="\t", stringsAsFactors=FALSE)
 
 # check the same column names across tables
 all(colnames(human.esc) == colnames(human.beta))
@@ -35,11 +36,13 @@ all.merge$Sig <- as.factor(all.merge$Sig)
 
 dir.cols <- c("#62148f", "#feaf10", "#878787")
 species.cols <- c("#0008FF", "#D90000")
+names(species.cols) <- c("Human", "Mouse")
+
 sig.alpha <- c(0.2, 1)
 names(sig.alpha) <- levels(all.merge$Sig)
 
 all.merge$Predictor <- reorder(all.merge$Predictor,
-                              -all.merge$STAT)
+                               -all.merge$STAT)
 all.merge$Id <- as.factor(with(all.merge, 
                                order(-ave(all.merge$STAT,
                                           all.merge$Predictor, FUN=max), all.merge$STAT)))
@@ -54,6 +57,7 @@ all.lm <- ggplot(all.merge,
   geom_hline(mapping=aes(yintercept=0), linetype="dashed", colour="grey") +
   geom_point(size=4) + 
   theme_mike() +
+  scale_y_continuous(limits=c(-30, 30), oob=squish) +
   scale_fill_manual(values=species.cols) +
   scale_shape_manual(values=c(21:25)) +
   scale_alpha_manual(values=sig.alpha) +
@@ -71,6 +75,6 @@ all.lm <- ggplot(all.merge,
         axis.line.x=element_blank())
 
 ggsave(all.lm,
-       filename="~/Dropbox/Noise_genomics/Figures/ms_figures/AllLM_figure.png",
+       filename="~/Dropbox/Noise_genomics/Figures/ms_figures/AllLM-CGI_figure.png",
        height=5.25, width=11.75, dpi=300)
 

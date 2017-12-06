@@ -29,7 +29,7 @@ beta.var.names <- beta.var.names[!grepl(beta.var.names, pattern="(NMI)|(CGI_SIZE
 
 for(x in seq_along(beta.var.names)){
   .variable <- paste(beta.var.names[x], sep=" + ")
-  .glm.form <- as.formula(paste("Alpha_r", .variable, sep=" ~ "))
+  .glm.form <- as.formula(paste("Residual.CV2", .variable, sep=" ~ "))
   
   m.rlm <- rlm(.glm.form, data=beta.match)
   m.robust <- summary(m.rlm)
@@ -63,6 +63,9 @@ beta.rlm.df$Predictor[beta.rlm.df$Predictor == "EXON_COUNT"] <- "Number of exons
 beta.rlm.df$Predictor[beta.rlm.df$Predictor == "EXON_TOTLENGTH"] <- "Transcript length"
 beta.rlm.df$Predictor[beta.rlm.df$Predictor == "EXON_VARLENGTH"] <- "Exon length variance"
 
+beta.rlm.df$Tissue <- "BetaIslet"
+beta.rlm.df$Species <- "Human"
+
 univar.plot <- ggplot(beta.rlm.df,
                       aes(x=reorder(Predictor, -STAT),
                           y=STAT, fill=Direction)) +
@@ -71,8 +74,7 @@ univar.plot <- ggplot(beta.rlm.df,
   theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1)) +
   labs(x="Annotation", y="t-statistic") +
   guides(fill=FALSE) +
-  geom_hline(mapping=aes(yintercept=0), linetype="dashed", colour="grey") +
-  scale_y_continuous(limits=c(-50, 50))
+  geom_hline(mapping=aes(yintercept=0), linetype="dashed", colour="grey") 
 
 ggsave(univar.plot,
        filename="~/Dropbox/Noise_genomics/Figures/ms_figures/human-BetaIslet_univariateLM.png",
@@ -86,7 +88,7 @@ beta.genomic.vars <- paste(c("Mean",
                              beta.var.names),
                            collapse=" + ")
 
-beta.glm.form <- as.formula(paste("Alpha_r",
+beta.glm.form <- as.formula(paste("Residual.CV2",
                                   beta.genomic.vars, sep=" ~ "))
 
 beta.rlm <- rlm(beta.glm.form, data=beta.match)
@@ -132,8 +134,7 @@ multivar.plot <- ggplot(beta.rlm.res,
   theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1)) +
   labs(x="Annotation", y="t-statistic") +
   guides(fill=FALSE) +
-  geom_hline(mapping=aes(yintercept=0), linetype="dashed", colour="grey") +
-  scale_y_continuous(limits=c(-50, 50))
+  geom_hline(mapping=aes(yintercept=0), linetype="dashed", colour="grey")
 
 ggsave(multivar.plot,
        filename="~/Dropbox/Noise_genomics/Figures/ms_figures/human-BetaIslet_multiivariateLM.png",
@@ -158,8 +159,7 @@ all.plot <- ggplot(beta.rlm.all,
   scale_shape_manual(values=c(21, 23)) +
   theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1)) +
   labs(x="Annotation", y="t-statistic") +
-  guides(fill=FALSE, shape=FALSE) +
-  scale_y_continuous(limits=c(-50, 50))
+  guides(fill=FALSE, shape=FALSE) 
 
 ggsave(all.plot,
        filename="~/Dropbox/Noise_genomics/Figures/ms_figures/human-BetaIslet_allLM.png",
@@ -174,7 +174,7 @@ beta.match$CpGisland <- factor(beta.match$N_CpG,
 cpg.cols <- c("#027E00", "#00DDEC")
 names(cpg.cols) <- levels(beta.match$CpGisland)
 
-tc_cpg <- ggplot(beta.match, aes(x=CpGisland, y=Alpha_r, colour=CpGisland)) + 
+tc_cpg <- ggplot(beta.match, aes(x=CpGisland, y=Residual.CV2, colour=CpGisland)) + 
   theme_mike() + 
   geom_jitter(position=position_jitterdodge(jitter.height=0,
                                             jitter.width=1.5),

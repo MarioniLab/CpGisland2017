@@ -1,7 +1,7 @@
 source("~/Dropbox/R_sessions/Noise/mESC_chromHMM.R")
 source("~/Dropbox/R_sessions/Noise/genomic_noise_features.R")
 source("~/Dropbox/R_sessions/Noise/tcell_genomic_noise_features.R")
-
+library(MASS)
 library(ggplot2)
 source("~/Dropbox/R_sessions/GGMike/theme_mike.R")
 
@@ -27,7 +27,7 @@ tcell.var.names <- tcell.var.names[!grepl(tcell.var.names, pattern="(NMI)|(CGI_S
 
 for(x in seq_along(tcell.var.names)){
   .variable <- paste(tcell.var.names[x], sep=" + ")
-  .glm.form <- as.formula(paste("Alpha_r", .variable, sep=" ~ "))
+  .glm.form <- as.formula(paste("Residual.CV2", .variable, sep=" ~ "))
   
   m.rlm <- rlm(.glm.form, data=tcell.match)
   m.robust <- summary(m.rlm)
@@ -61,6 +61,9 @@ tcell.rlm.df$Predictor[tcell.rlm.df$Predictor == "EXON_COUNT"] <- "Number of exo
 tcell.rlm.df$Predictor[tcell.rlm.df$Predictor == "EXON_TOTLENGTH"] <- "Transcript length"
 tcell.rlm.df$Predictor[tcell.rlm.df$Predictor == "EXON_VARLENGTH"] <- "Exon length variance"
 
+tcell.rlm.df$Tissue <- "Tcell"
+tcell.rlm.df$Species <- "Mouse"
+
 univar.plot <- ggplot(tcell.rlm.df,
                       aes(x=reorder(Predictor, -STAT),
                           y=STAT, fill=Direction)) +
@@ -81,7 +84,7 @@ ggsave(univar.plot,
 ## multivariate robust linear regression ##
 ###########################################
 
-tcell.glm.form <- as.formula(paste("Alpha_r",
+tcell.glm.form <- as.formula(paste("Residual.CV2",
                                   tcell.genomic.vars, sep=" ~ "))
 
 tcell.rlm <- rlm(tcell.glm.form, data=tcell.match)
@@ -155,7 +158,7 @@ all.plot <- ggplot(tcell.rlm.all,
   scale_shape_manual(values=c(21, 23)) +
   theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1)) +
   labs(x="Annotation", y="t-statistic") +
-  guides(fill=FALSE) +
+  guides(fill=FALSE, shape=FALSE) +
   scale_y_continuous(limits=c(-50, 50))
 
 ggsave(all.plot,
@@ -171,14 +174,14 @@ tcell.match$CpGisland <- factor(tcell.match$N_CpG,
 cpg.cols <- c("#027E00", "#00DDEC")
 names(cpg.cols) <- levels(tcell.match$CpGisland)
 
-tc_cpg <- ggplot(tcell.match, aes(x=CpGisland, y=Alpha_r, colour=CpGisland)) + 
+tc_cpg <- ggplot(tcell.match, aes(x=CpGisland, y=Residual.CV2, colour=CpGisland)) + 
   theme_mike() + 
   geom_jitter(position=position_jitterdodge(jitter.height=0,
                                             jitter.width=1.5),
               alpha=0.7) +
   geom_boxplot(width=0.5, fill='white', colour='black') +
   scale_colour_manual(values=cpg.cols) +
-  labs(x="Overlapping CpG island", y=expression(paste(alpha["r"], " Overdispersion"))) +
+  labs(x="Overlapping CpG island", y=expression(paste("Residual CV"^2))) +
   guides(colour=FALSE)
 
 ggsave(tc_cpg,
@@ -198,5 +201,3 @@ tc_cpgMe <- ggplot(tcell.match, aes(x=CpGisland, y=Mean, colour=CpGisland)) +
 ggsave(tc_cpgMe,
        filename="~/Dropbox/Noise_genomics/Figures/ms_figures/Tcell_boxplot_CpGislands-mean.png",
        height=3.75, width=4.75, dpi=300)
-
-

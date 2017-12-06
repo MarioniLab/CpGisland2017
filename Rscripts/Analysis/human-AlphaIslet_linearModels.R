@@ -1,6 +1,6 @@
 source("~/Dropbox/R_sessions/Noise/mESC_chromHMM.R")
 source("~/Dropbox/R_sessions/Noise/human_genomic_noise_features.R")
-source("~/Dropbox/src/CpGisland2017/Rscripts/Dispersion/human_alphaIslet_dispersions.R")
+source("~/Dropbox/R_sessions/Noise/human_pancreas_genomic_noise_features.R")
 
 library(ggplot2)
 library(MASS)
@@ -29,7 +29,7 @@ panc.var.names <- panc.var.names[!grepl(panc.var.names, pattern="(NMI)|(CGI_SIZE
 
 for(x in seq_along(panc.var.names)){
   .variable <- paste(panc.var.names[x], sep=" + ")
-  .glm.form <- as.formula(paste("Alpha_r", .variable, sep=" ~ "))
+  .glm.form <- as.formula(paste("Residual.CV2", .variable, sep=" ~ "))
   
   m.rlm <- rlm(.glm.form, data=panc.match)
   m.robust <- summary(m.rlm)
@@ -63,6 +63,9 @@ panc.rlm.df$Predictor[panc.rlm.df$Predictor == "EXON_COUNT"] <- "Number of exons
 panc.rlm.df$Predictor[panc.rlm.df$Predictor == "EXON_TOTLENGTH"] <- "Transcript length"
 panc.rlm.df$Predictor[panc.rlm.df$Predictor == "EXON_VARLENGTH"] <- "Exon length variance"
 
+panc.rlm.df$Tissue <- "AlphaIslet"
+panc.rlm.df$Species <- "Human"
+
 univar.plot <- ggplot(panc.rlm.df,
                       aes(x=reorder(Predictor, -STAT),
                           y=STAT, fill=Direction)) +
@@ -71,8 +74,7 @@ univar.plot <- ggplot(panc.rlm.df,
   theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1)) +
   labs(x="Annotation", y="t-statistic") +
   guides(fill=FALSE) +
-  geom_hline(mapping=aes(yintercept=0), linetype="dashed", colour="grey") +
-  scale_y_continuous(limits=c(-50, 50))
+  geom_hline(mapping=aes(yintercept=0), linetype="dashed", colour="grey") 
 
 ggsave(univar.plot,
        filename="~/Dropbox/Noise_genomics/Figures/ms_figures/human-AlphaIslet_univariateLM.png",
@@ -86,7 +88,7 @@ panc.genomic.vars <- paste(c("Mean",
                              panc.var.names),
                            collapse=" + ")
 
-panc.glm.form <- as.formula(paste("Alpha_r",
+panc.glm.form <- as.formula(paste("Residual.CV2",
                                   panc.genomic.vars, sep=" ~ "))
 
 panc.rlm <- rlm(panc.glm.form, data=panc.match)
@@ -134,8 +136,7 @@ multivar.plot <- ggplot(panc.rlm.res,
   theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1)) +
   labs(x="Annotation", y="t-statistic") +
   guides(fill=FALSE) +
-  geom_hline(mapping=aes(yintercept=0), linetype="dashed", colour="grey") +
-  scale_y_continuous(limits=c(-50, 50))
+  geom_hline(mapping=aes(yintercept=0), linetype="dashed", colour="grey")
 
 ggsave(multivar.plot,
        filename="~/Dropbox/Noise_genomics/Figures/ms_figures/human-AlphaIslet_multiivariateLM.png",
@@ -160,8 +161,7 @@ all.plot <- ggplot(panc.rlm.all,
   scale_shape_manual(values=c(21, 23)) +
   theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1)) +
   labs(x="Annotation", y="t-statistic") +
-  guides(fill=FALSE, shape=FALSE) +
-  scale_y_continuous(limits=c(-50, 50))
+  guides(fill=FALSE, shape=FALSE)
 
 ggsave(all.plot,
        filename="~/Dropbox/Noise_genomics/Figures/ms_figures/human-AlphaIslet_allLM.png",
@@ -176,7 +176,7 @@ panc.match$CpGisland <- factor(panc.match$N_CpG,
 cpg.cols <- c("#027E00", "#00DDEC")
 names(cpg.cols) <- levels(panc.match$CpGisland)
 
-tc_cpg <- ggplot(panc.match, aes(x=CpGisland, y=Alpha_r, colour=CpGisland)) + 
+tc_cpg <- ggplot(panc.match, aes(x=CpGisland, y=Residual.CV2, colour=CpGisland)) + 
   theme_mike() + 
   geom_jitter(position=position_jitterdodge(jitter.height=0,
                                             jitter.width=1.5),
