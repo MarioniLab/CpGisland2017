@@ -63,12 +63,14 @@ all.lm <- ggplot(all.merge,
              space="free_x",
              scales="free_x", switch="x") +
   theme(panel.spacing=unit(0.25, "lines"),
-        strip.text=element_text(angle=90, vjust=1, hjust=0.5,
+        strip.text=element_text(angle=90, vjust=1, hjust=0.5, size=16,
                                 family='Helvetica', face='plain'),
         strip.background=element_blank()) +
   theme(axis.text.x=element_blank(),
         axis.ticks.x=element_blank(),
-        axis.line.x=element_blank())
+        axis.line.x=element_blank(),
+        axis.text=element_text(size=16)) +
+  scale_y_continuous(limits=c(-50, 50), oob=squish)
 
 ggsave(all.lm,
        filename="~/Dropbox/Noise_genomics/Figures/ms_figures/AllLM_figure.png",

@@ -6,7 +6,7 @@ library(ggplot2)
 source("~/Dropbox/R_sessions/GGMike/theme_mike.R")
 
 tcell.vars <- colnames(genomic.features)[2:16]
-tcell.vars <- tcell.vars[!grepl(tcell.vars, pattern="(NMI)|(CGI_SIZE)|(cpg_)")]
+tcell.vars <- tcell.vars[!grepl(tcell.vars, pattern="(NMI)|(CGI_SIZE)|(cpg_)|(PHAST)")]
 
 tcell.genomic.vars <- paste(c("Mean",
                              tcell.vars),
@@ -23,7 +23,7 @@ tcell.univariate_list <- list()
 tcell.var.names <- unlist(strsplit(tcell.genomic.vars, split=" + ", fixed=T))
 # remove redundant variables, i.e CpG island AND NMI
 # remove CpG island characteristics
-tcell.var.names <- tcell.var.names[!grepl(tcell.var.names, pattern="(NMI)|(CGI_SIZE)|(cpg_)")]
+tcell.var.names <- tcell.var.names[!grepl(tcell.var.names, pattern="(NMI)|(CGI_SIZE)|(cpg_)|(PHAST)")]
 
 for(x in seq_along(tcell.var.names)){
   .variable <- paste(tcell.var.names[x], sep=" + ")
@@ -156,7 +156,8 @@ all.plot <- ggplot(tcell.rlm.all,
   theme_mike() +
   scale_fill_manual(values=c("#62148f", "#feaf10", "#878787")) +
   scale_shape_manual(values=c(21, 23)) +
-  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1)) +
+  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1),
+        axis.text=element_text(size=16)) +
   labs(x="Annotation", y="t-statistic") +
   guides(fill=FALSE, shape=FALSE) +
   scale_y_continuous(limits=c(-50, 50))
@@ -182,7 +183,9 @@ tc_cpg <- ggplot(tcell.match, aes(x=CpGisland, y=Residual.CV2, colour=CpGisland)
   geom_boxplot(width=0.5, fill='white', colour='black') +
   scale_colour_manual(values=cpg.cols) +
   labs(x="Overlapping CpG island", y=expression(paste("Residual CV"^2))) +
-  guides(colour=FALSE)
+  guides(colour=FALSE)  +
+  theme(axis.text=element_text(size=16),
+        axis.title=element_text(size=16))
 
 ggsave(tc_cpg,
        filename="~/Dropbox/Noise_genomics/Figures/ms_figures/Tcell_boxplot_CpGislands-overdispersion.png",

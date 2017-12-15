@@ -167,7 +167,8 @@ all.plot <- ggplot(mesc.rlm.all,
   theme_mike() +
   scale_fill_manual(values=c("#62148f", "#feaf10", "#878787")) +
   scale_shape_manual(values=c(21, 23)) +
-  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1)) +
+  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1),
+        axis.text=element_text(size=16)) +
   labs(x="Annotation", y="t-statistic") +
   guides(fill=FALSE, shape=FALSE) +
   scale_y_continuous(limits=c(-30, 30), oob=squish)

@@ -6,7 +6,7 @@ library(ggplot2)
 source("~/Dropbox/R_sessions/GGMike/theme_mike.R")
 
 mesc.vars <- colnames(genomic.features)[2:16]
-mesc.vars <- mesc.vars[!grepl(mesc.vars, pattern="(NMI)|(CGI_SIZE)|(cpg_)")]
+mesc.vars <- mesc.vars[!grepl(mesc.vars, pattern="(NMI)|(CGI_SIZE)|(cpg_)|(PHAST)")]
 
 mesc.genomic.vars <- paste(c("Mean",
                              mesc.vars),
@@ -23,7 +23,7 @@ mesc.univariate_list <- list()
 mesc.var.names <- unlist(strsplit(mesc.genomic.vars, split=" + ", fixed=T))
 # remove redundant variables, i.e CpG island AND NMI
 # remove CpG island characteristics
-mesc.var.names <- mesc.var.names[!grepl(mesc.var.names, pattern="(NMI)|(CGI_SIZE)|(cpg_)")]
+mesc.var.names <- mesc.var.names[!grepl(mesc.var.names, pattern="(NMI)|(CGI_SIZE)|(cpg_)|(PHAST)")]
 
 for(x in seq_along(mesc.var.names)){
   .variable <- paste(mesc.var.names[x], sep=" + ")
@@ -156,7 +156,8 @@ all.plot <- ggplot(mesc.rlm.all,
   theme_mike() +
   scale_fill_manual(values=c("#62148f", "#feaf10", "#878787")) +
   scale_shape_manual(values=c(21, 23)) +
-  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1)) +
+  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1),
+        axis.text=element_text(size=16)) +
   labs(x="Annotation", y="t-statistic") +
   guides(fill=FALSE, shape=FALSE) +
   scale_y_continuous(limits=c(-50, 50))
@@ -165,9 +166,9 @@ ggsave(all.plot,
        filename="~/Dropbox/Noise_genomics/Figures/ms_figures/mESC_allLM.png",
        height=5.6, width=7.75, dpi=300)
 
-###############################
-## Plot CpG islands vs alpha ##
-###############################
+##############################
+## Plot CpG islands vs rCV2 ##
+##############################
 mesc.match$CpGisland <- factor(mesc.match$N_CpG,
                                 levels=c(0, 1),
                                 labels=c("Non-CpG island", "CpG island"))
@@ -182,7 +183,9 @@ tc_cpg <- ggplot(mesc.match, aes(x=CpGisland, y=Residual.CV2, colour=CpGisland))
   geom_boxplot(width=0.5, fill='white', colour='black') +
   scale_colour_manual(values=cpg.cols) +
   labs(x="Overlapping CpG island", y=expression(paste("Residual CV"^2))) +
-  guides(colour=FALSE)
+  guides(colour=FALSE) +
+  theme(axis.text=element_text(size=16),
+        axis.title=element_text(size=16))
 
 ggsave(tc_cpg,
        filename="~/Dropbox/Noise_genomics/Figures/ms_figures/mESC_boxplot_CpGislands-overdispersion.png",

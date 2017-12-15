@@ -1,6 +1,6 @@
 # script for calculating alpha-overdispersions for supplementary figures
 library(e1071)
-
+library(statmod)
 # NB: change these to the appropriate paths
 mesc.cells <- read.table("~/Dropbox/mESC/mESC_SFnorm.tsv",
                          sep="\t", h=T, stringsAsFactors=F)
@@ -131,8 +131,8 @@ fit <- glmgam.fit(cbind(a0 = 1, a1tilde=1/mesc.gene.summary$Mean[!useForFit]),
 mesc.gene.summary$Residual.CV2[!useForFit] <- fitted.values(fit) - mesc.gene.summary$CV2[!useForFit]
 
 png("~/Dropbox/Noise_genomics/Figures/ms_figures/Supplementary_mESC_dispersion-CV2Vsalpha.png",
-     height=2.5, width=7.75, res=300, units="in")
-par(mfrow=c(1, 2), mar=c(4.6, 4.6, 2.1, 1.1))
+     height=7.25, width=5.75, res=300, units="in")
+par(mfrow=c(2, 1), mar=c(4.6, 4.6, 2.1, 1.1))
 plot(x=mesc.gene.summary$CV2,
      y=mesc.gene.summary$Alpha.loess,
      ylab=expression(paste(alpha, " Overdispersion")),

@@ -1,4 +1,5 @@
 # BMDC time-series
+library(statmod)
 library(lsa)
 library(mgcv)
 library(MASS)
@@ -17,6 +18,7 @@ source("~/Dropbox/R_sessions/Noise/mESC_chromHMM.R")
 source("~/Dropbox/R_sessions/Noise/genomic_noise_features.R")
 source("~/Dropbox/R_sessions/GGMike/theme_mike.R")
 source("~/Dropbox/R_sessions/SingleCellFunctions/single_cell_functions.R")
+mouse.genomic.features$CGI_SIZE.kb <- mouse.genomic.features$CGI_SIZE/1000
 
 ensembl <- useEnsembl(biomart='ensembl', dataset='mmusculus_gene_ensembl', GRCh=37)
 
@@ -365,62 +367,131 @@ bmdc.pic_de.merge <- Reduce(x=bmdc.pic.de_list,
 bmdc.pic.genomic <- merge(genomic.features, bmdc.pic_de.merge, by.x='GENE', by.y='gene_id')
 bmdc.pic.genomic$CGI_SIZE.kb <- bmdc.pic.genomic$CGI_SIZE/1000
 
+################################################################################################
+#### use a binomial test to find differences in the CpG island size ranks between timepoints ###
+################################################################################################
+###########
+### LPS ###
+###########
+bmdc.lps.0v1.merge <- merge(bmdc.lps.de.res.0v1, genomic.features, by.x='gene_id', by.y='GENE')
+bmdc.lps.1v2.merge <- merge(bmdc.lps.de.res.1v2, genomic.features, by.x='gene_id', by.y='GENE')
+
+# select only the up-regulated genes
+bmdc.lps.0v1.merge.cgi <- bmdc.lps.0v1.merge[bmdc.lps.0v1.merge$CGI_SIZE.kb != 0 &
+                                               !is.na(bmdc.lps.0v1.merge$CGI_SIZE.kb) &
+                                               bmdc.lps.0v1.merge$t0_t1.logFC > 0, ]
+bmdc.lps.1v2.merge.cgi <- bmdc.lps.1v2.merge[bmdc.lps.1v2.merge$CGI_SIZE.kb != 0 & 
+                                               !is.na(bmdc.lps.1v2.merge$CGI_SIZE.kb) &
+                                               bmdc.lps.1v2.merge$t1_t2.logFC > 0, ]
+
+# order based on t-statistic
+bmdc.lps.res01.size_rank <- bmdc.lps.0v1.merge.cgi$CGI_SIZE.kb[order(bmdc.lps.0v1.merge.cgi$t0_t1.t, decreasing=TRUE)]
+bmdc.lps.res26.size_rank <- bmdc.lps.1v2.merge.cgi$CGI_SIZE.kb[order(bmdc.lps.1v2.merge.cgi$t1_t2.t, decreasing=TRUE)]
+
+bmdc.lps.sign.size_rank <- as.numeric(bmdc.lps.res01.size_rank < bmdc.lps.res26.size_rank)
+binom.test(sum(bmdc.lps.sign.size_rank), n=length(bmdc.lps.sign.size_rank),
+           alternative="greater")
+
+###########
+### PIC ###
+###########
+
+bmdc.pic.0v1.merge <- merge(bmdc.pic.de.res.0v1, genomic.features, by.x='gene_id', by.y='GENE')
+bmdc.pic.1v2.merge <- merge(bmdc.pic.de.res.1v2, genomic.features, by.x='gene_id', by.y='GENE')
+
+# select only the up-regulated genes
+bmdc.pic.0v1.merge.cgi <- bmdc.pic.0v1.merge[bmdc.pic.0v1.merge$CGI_SIZE.kb != 0 &
+                                               !is.na(bmdc.pic.0v1.merge$CGI_SIZE.kb) &
+                                               bmdc.pic.0v1.merge$t0_t1.logFC > 0, ]
+bmdc.pic.1v2.merge.cgi <- bmdc.pic.1v2.merge[bmdc.pic.1v2.merge$CGI_SIZE.kb != 0 & 
+                                               !is.na(bmdc.pic.1v2.merge$CGI_SIZE.kb) &
+                                               bmdc.pic.1v2.merge$t1_t2.logFC > 0, ]
+
+# order based on t-statistic
+bmdc.pic.res01.size_rank <- bmdc.pic.0v1.merge.cgi$CGI_SIZE.kb[order(bmdc.pic.0v1.merge.cgi$t0_t1.t, decreasing=TRUE)]
+bmdc.pic.res26.size_rank <- bmdc.pic.1v2.merge.cgi$CGI_SIZE.kb[order(bmdc.pic.1v2.merge.cgi$t1_t2.t, decreasing=TRUE)]
+
+bmdc.pic.sign.size_rank <- as.numeric(bmdc.pic.res01.size_rank < bmdc.pic.res26.size_rank)
+binom.test(sum(bmdc.pic.sign.size_rank), n=length(bmdc.pic.sign.size_rank),
+           alternative="greater")
+
+
+###########
+### PAM ###
+###########
+
+bmdc.pam.0v1.merge <- merge(bmdc.pam.de.res.0v1, genomic.features, by.x='gene_id', by.y='GENE')
+bmdc.pam.1v2.merge <- merge(bmdc.pam.de.res.1v2, genomic.features, by.x='gene_id', by.y='GENE')
+
+# select only the up-regulated genes
+bmdc.pam.0v1.merge.cgi <- bmdc.pam.0v1.merge[bmdc.pam.0v1.merge$CGI_SIZE.kb != 0 &
+                                               !is.na(bmdc.pam.0v1.merge$CGI_SIZE.kb) &
+                                               bmdc.pam.0v1.merge$t0_t1.logFC > 0, ]
+bmdc.pam.1v2.merge.cgi <- bmdc.pam.1v2.merge[bmdc.pam.1v2.merge$CGI_SIZE.kb != 0 & 
+                                               !is.na(bmdc.pam.1v2.merge$CGI_SIZE.kb) &
+                                               bmdc.pam.1v2.merge$t1_t2.logFC > 0, ]
+# order based on t-statistic
+bmdc.pam.res01.size_rank <- bmdc.pam.0v1.merge.cgi$CGI_SIZE.kb[order(bmdc.pam.0v1.merge.cgi$t0_t1.t, decreasing=TRUE)]
+bmdc.pam.res26.size_rank <- bmdc.pam.1v2.merge.cgi$CGI_SIZE.kb[order(bmdc.pam.1v2.merge.cgi$t1_t2.t, decreasing=TRUE)]
+
+bmdc.pam.sign.size_rank <- as.numeric(bmdc.pam.res01.size_rank < bmdc.pam.res26.size_rank)
+binom.test(sum(bmdc.pam.sign.size_rank), n=length(bmdc.pam.sign.size_rank),
+           alternative="greater")
+
+
 # within each condition, compare the timepoint specific CGI size distributions of DE genes
 # get CGI sizes for up-regulated genes at each time point
-bmdc.lps.up.0v1 <- bmdc.lps.genomic$CGI_SIZE.kb[bmdc.lps.genomic$t0_t1.Diff == 1 & bmdc.lps.genomic$CGI_SIZE.kb > 0]
-bmdc.lps.up.1v2 <- bmdc.lps.genomic$CGI_SIZE.kb[bmdc.lps.genomic$t1_t2.Diff == 1 & bmdc.lps.genomic$CGI_SIZE.kb > 0]
-bmdc.lps.up.2v4 <- bmdc.lps.genomic$CGI_SIZE.kb[bmdc.lps.genomic$t2_t4.Diff == 1 & bmdc.lps.genomic$CGI_SIZE.kb > 0]
-bmdc.lps.up.4v6 <- bmdc.lps.genomic$CGI_SIZE.kb[bmdc.lps.genomic$t4_t6.Diff == 1 & bmdc.lps.genomic$CGI_SIZE.kb > 0]
+# top 250 genes from each only
+bmdc.lps.up.0v1 <- bmdc.lps.0v1.merge.cgi$CGI_SIZE.kb
+bmdc.lps.up.0v1 <- bmdc.lps.up.0v1[order(bmdc.lps.0v1.merge.cgi$t0_t1.t, decreasing=TRUE)][1:250]
 
-# pam
-bmdc.pam.up.0v1 <- bmdc.pam.genomic$CGI_SIZE.kb[bmdc.pam.genomic$t0_t1.Diff == 1 & bmdc.pam.genomic$CGI_SIZE.kb > 0]
-bmdc.pam.up.1v2 <- bmdc.pam.genomic$CGI_SIZE.kb[bmdc.pam.genomic$t1_t2.Diff == 1 & bmdc.pam.genomic$CGI_SIZE.kb > 0]
-bmdc.pam.up.2v4 <- bmdc.pam.genomic$CGI_SIZE.kb[bmdc.pam.genomic$t2_t4.Diff == 1 & bmdc.pam.genomic$CGI_SIZE.kb > 0]
-bmdc.pam.up.4v6 <- bmdc.pam.genomic$CGI_SIZE.kb[bmdc.pam.genomic$t4_t6.Diff == 1 & bmdc.pam.genomic$CGI_SIZE.kb > 0]
+bmdc.lps.up.1v2 <- bmdc.lps.1v2.merge.cgi$CGI_SIZE.kb
+bmdc.lps.up.1v2 <- bmdc.lps.up.1v2[order(bmdc.lps.1v2.merge.cgi$t1_t2.t, decreasing=TRUE)][1:250]
 
-# pic
-bmdc.pic.up.0v1 <- bmdc.pic.genomic$CGI_SIZE.kb[bmdc.pic.genomic$t0_t1.Diff == 1 & bmdc.pic.genomic$CGI_SIZE.kb > 0]
-bmdc.pic.up.1v2 <- bmdc.pic.genomic$CGI_SIZE.kb[bmdc.pic.genomic$t1_t2.Diff == 1 & bmdc.pic.genomic$CGI_SIZE.kb > 0]
-bmdc.pic.up.2v4 <- bmdc.pic.genomic$CGI_SIZE.kb[bmdc.pic.genomic$t2_t4.Diff == 1 & bmdc.pic.genomic$CGI_SIZE.kb > 0]
-bmdc.pic.up.4v6 <- bmdc.pic.genomic$CGI_SIZE.kb[bmdc.pic.genomic$t4_t6.Diff == 1 & bmdc.pic.genomic$CGI_SIZE.kb > 0]
 
 bmdc.lps.size_list <- list("0v1"=cbind(bmdc.lps.up.0v1, rep("0v1", length(bmdc.lps.up.0v1))),
-                           "1v2"=cbind(bmdc.lps.up.1v2, rep("1v2", length(bmdc.lps.up.1v2))),
-                           "2v4"=cbind(bmdc.lps.up.2v4, rep("2v4", length(bmdc.lps.up.2v4))),
-                           "4v6"=cbind(bmdc.lps.up.4v6, rep("4v6", length(bmdc.lps.up.4v6))))
+                           "1v2"=cbind(bmdc.lps.up.1v2, rep("1v2", length(bmdc.lps.up.1v2))))
 
 bmdc.lps.size.df <- data.frame(do.call(rbind, bmdc.lps.size_list))
 colnames(bmdc.lps.size.df) <- c("CGI_SIZE.kb", "Comparison")
 bmdc.lps.size.df$CGI_SIZE.kb <- as.numeric(as.character(bmdc.lps.size.df$CGI_SIZE.kb))
 bmdc.lps.size.df$Comparison <- factor(bmdc.lps.size.df$Comparison,
-                                      levels=c("0v1", "1v2", "2v4", "4v6"),
-                                      labels=c("0v1", "1v2", "2v4", "4v6"))
+                                      levels=c("0v1", "1v2"),
+                                      labels=c("0v1", "1v2"))
 
+# pam
+bmdc.pam.up.0v1 <- bmdc.pic.0v1.merge.cgi$CGI_SIZE.kb
+bmdc.pam.up.0v1 <- bmdc.pam.up.0v1[order(bmdc.pic.0v1.merge.cgi$t0_t1.t, decreasing=TRUE)][1:250]
+
+bmdc.pam.up.1v2 <- bmdc.pic.1v2.merge.cgi$CGI_SIZE.kb
+bmdc.pam.up.1v2 <- bmdc.pam.up.1v2[order(bmdc.pic.1v2.merge.cgi$t1_t2.t, decreasing=TRUE)][1:250]
 
 bmdc.pam.size_list <- list("0v1"=cbind(bmdc.pam.up.0v1, rep("0v1", length(bmdc.pam.up.0v1))),
-                           "1v2"=cbind(bmdc.pam.up.1v2, rep("1v2", length(bmdc.pam.up.1v2))),
-                           "2v4"=cbind(bmdc.pam.up.2v4, rep("2v4", length(bmdc.pam.up.2v4))),
-                           "4v6"=cbind(bmdc.pam.up.4v6, rep("4v6", length(bmdc.pam.up.4v6))))
+                           "1v2"=cbind(bmdc.pam.up.1v2, rep("1v2", length(bmdc.pam.up.1v2))))
 
 bmdc.pam.size.df <- data.frame(do.call(rbind, bmdc.pam.size_list))
 colnames(bmdc.pam.size.df) <- c("CGI_SIZE.kb", "Comparison")
 bmdc.pam.size.df$CGI_SIZE.kb <- as.numeric(as.character(bmdc.pam.size.df$CGI_SIZE.kb))
 bmdc.pam.size.df$Comparison <- factor(bmdc.pam.size.df$Comparison,
-                                      levels=c("0v1", "1v2", "2v4", "4v6"),
-                                      labels=c("0v1", "1v2", "2v4", "4v6"))
+                                      levels=c("0v1", "1v2"),
+                                      labels=c("0v1", "1v2"))
 
+# pic
+bmdc.pic.up.0v1 <- bmdc.pam.0v1.merge.cgi$CGI_SIZE.kb
+bmdc.pic.up.0v1 <- bmdc.pic.up.0v1[order(bmdc.pam.0v1.merge.cgi$t0_t1.t, decreasing=TRUE)][1:250]
+
+bmdc.pic.up.1v2 <- bmdc.pam.1v2.merge.cgi$CGI_SIZE.kb
+bmdc.pic.up.1v2 <- bmdc.pic.up.1v2[order(bmdc.pam.1v2.merge.cgi$t1_t2.t, decreasing=TRUE)][1:250]
 
 bmdc.pic.size_list <- list("0v1"=cbind(bmdc.pic.up.0v1, rep("0v1", length(bmdc.pic.up.0v1))),
-                           "1v2"=cbind(bmdc.pic.up.1v2, rep("1v2", length(bmdc.pic.up.1v2))),
-                           "2v4"=cbind(bmdc.pic.up.2v4, rep("2v4", length(bmdc.pic.up.2v4))),
-                           "4v6"=cbind(bmdc.pic.up.4v6, rep("4v6", length(bmdc.pic.up.4v6))))
+                           "1v2"=cbind(bmdc.pic.up.1v2, rep("1v2", length(bmdc.lps.up.1v2))))
 
 bmdc.pic.size.df <- data.frame(do.call(rbind, bmdc.pic.size_list))
 colnames(bmdc.pic.size.df) <- c("CGI_SIZE.kb", "Comparison")
 bmdc.pic.size.df$CGI_SIZE.kb <- as.numeric(as.character(bmdc.pic.size.df$CGI_SIZE.kb))
 bmdc.pic.size.df$Comparison <- factor(bmdc.pic.size.df$Comparison,
-                                      levels=c("0v1", "1v2", "2v4", "4v6"),
-                                      labels=c("0v1", "1v2", "2v4", "4v6"))
+                                      levels=c("0v1", "1v2"),
+                                      labels=c("0v1", "1v2"))
 
 #################
 ### plotting ####
@@ -536,39 +607,318 @@ ggsave(bmdc.pic.size.dens,
        filename="~/Dropbox/Noise_genomics/Figures/ms_figures/BMDC_PIC-CGIsize_density.png",
        height=4.25, width=4.75, dpi=300)
 
-# # how much overlap is there in the CGI up-regulated genes between conditions - 0 vs 1
-# bmdc.lps.0v1.genes <- bmdc.lps.genomic$GENE[bmdc.lps.genomic$t0_t1.Diff == 1 & bmdc.lps.genomic$CGI_SIZE.kb > 0]
-# bmdc.pam.0v1.genes <- bmdc.pam.genomic$GENE[bmdc.pam.genomic$t0_t1.Diff == 1 & bmdc.pam.genomic$CGI_SIZE.kb > 0]
-# bmdc.pic.0v1.genes <- bmdc.pic.genomic$GENE[bmdc.pic.genomic$t0_t1.Diff == 1 & bmdc.pic.genomic$CGI_SIZE.kb > 0]
-# 
-# grid.newpage()
-# bmdc.venn.0v1 <- draw.triple.venn(area1=length(bmdc.lps.0v1.genes),
-#                                   area2=length(bmdc.pam.0v1.genes),
-#                                   area3=length(bmdc.pic.0v1.genes),
-#                                   n12=length(intersect(bmdc.lps.0v1.genes, bmdc.pam.0v1.genes)),
-#                                   n13=length(intersect(bmdc.lps.0v1.genes, bmdc.pic.0v1.genes)),
-#                                   n23=length(intersect(bmdc.pam.0v1.genes, bmdc.pic.0v1.genes)),
-#                                   n123=length(intersect(bmdc.lps.0v1.genes,
-#                                                         intersect(bmdc.pam.0v1.genes, bmdc.pic.0v1.genes))),
-#                                   category=c("LPS", "PAM", "PIC"))
-# grid.draw(bmdc.venn.0v1)
-# 
-# # how much overlap is there in the CGI up-regulated genes between conditions - 1 vs 2
-# bmdc.lps.1v2.genes <- bmdc.lps.genomic$GENE[bmdc.lps.genomic$t1_t2.Diff == 1 & bmdc.lps.genomic$CGI_SIZE.kb > 0]
-# bmdc.pam.1v2.genes <- bmdc.pam.genomic$GENE[bmdc.pam.genomic$t1_t2.Diff == 1 & bmdc.pam.genomic$CGI_SIZE.kb > 0]
-# bmdc.pic.1v2.genes <- bmdc.pic.genomic$GENE[bmdc.pic.genomic$t1_t2.Diff == 1 & bmdc.pic.genomic$CGI_SIZE.kb > 0]
-# 
-# grid.newpage()
-# bmdc.venn.1v2 <- draw.triple.venn(area1=length(bmdc.lps.1v2.genes),
-#                                   area2=length(bmdc.pam.1v2.genes),
-#                                   area3=length(bmdc.pic.1v2.genes),
-#                                   n12=length(intersect(bmdc.lps.1v2.genes, bmdc.pam.1v2.genes)),
-#                                   n13=length(intersect(bmdc.lps.1v2.genes, bmdc.pic.1v2.genes)),
-#                                   n23=length(intersect(bmdc.pam.1v2.genes, bmdc.pic.1v2.genes)),
-#                                   n123=length(intersect(bmdc.lps.1v2.genes,
-#                                                         intersect(bmdc.pam.1v2.genes, bmdc.pic.1v2.genes))),
-#                                   category=c("LPS", "PAM", "PIC"))
-# grid.draw(bmdc.venn.1v2)
+
+# we should expect that the noisy genes in the unstimulated cells are also the ones that are up-regulated
+# post-stimulation
+# split by stimulation
+#########
+## LPS ##
+#########
+# calculate the variability in expression at the 0h
+
+lps.0h.cells <- na.omit(bmdc.meta$Sample[bmdc.meta$Timepoint == "0h"])
+lps.0h.mean <- rowMeans(bmdc.lps.exprs[, lps.0h.cells])
+lps.0h.var <- apply(bmdc.lps.exprs[, lps.0h.cells], 1, var)
+lps.0h.cv2 <- lps.0h.var/(lps.0h.mean**2)
+
+# calculate the residual CV^2
+useForFit <- is.na(lps.0h.cv2) | lps.0h.mean < 0.1 | is.na(1/lps.0h.mean)
+
+smoothScatter(x=lps.0h.mean[!useForFit], y=lps.0h.cv2[!useForFit])
+
+# fit with a gamma-distributed GLM
+fit <- glmgam.fit(cbind(a0 = 1, a1tilde=1/lps.0h.mean[!useForFit]), 
+                  lps.0h.cv2[!useForFit])
+lps.0h.rCV2 <- fitted.values(fit) - lps.0h.cv2[!useForFit]
+
+# plot gene expression varibility Vs logFC
+lps.0h.sum <- do.call(cbind.data.frame,
+                      list("Mean"=lps.0h.mean[!useForFit],
+                           "CV2"=lps.0h.cv2[!useForFit],
+                           "rCV2"=lps.0h.rCV2,
+                           "gene_id"=rownames(bmdc.lps.exprs)[!useForFit]))
+
+# merge with genomic features
+lps.0h.demerge <- merge(lps.0h.sum, bmdc.lps.de.res.0v1, by='gene_id')
+lps.0h.genomic <- merge(lps.0h.demerge, mouse.genomic.features, by.x='gene_id', by.y='GENE')
+
+# split CGIs into size bins on quartiles
+lps.0h.genomic$CGI_SIZE.group <- as.character(cut(lps.0h.genomic$CGI_SIZE.kb,
+                                                  breaks=c(0.5, 1.0, 1.5, 2.0, 2.5, 3.0)))
+lps.0h.genomic$CGI_SIZE.group[(lps.0h.genomic$CGI_SIZE.kb <= 0.5)] <- "(0,0.5]"
+lps.0h.genomic$CGI_SIZE.group[(lps.0h.genomic$CGI_SIZE.kb > 3.0)] <- "(3,4.585]"
+lps.0h.genomic$CGI_SIZE.group[is.na(lps.0h.genomic$CGI_SIZE.group) | lps.0h.genomic$CGI_SIZE.kb == 0] <- "Absent"
+lps.0h.genomic$CGI_SIZE.group <- factor(lps.0h.genomic$CGI_SIZE.group,
+                                                labels=c("Absent", "(0,0.5]", "(0.5,1]", "(1,1.5]",  "(1.5,2]", "(2,2.5]",
+                                                         "(2.5,3]", "(3,4.585]"),
+                                                levels=c("Absent", "(0,0.5]", "(0.5,1]", "(1,1.5]",  "(1.5,2]", "(2,2.5]",
+                                                         "(2.5,3]", "(3,4.585]"))
+
+lps.cv2.by.cgi <- ggplot(lps.0h.genomic[lps.0h.genomic$N_CpG == 1,],
+       aes(y=CV2, x=CGI_SIZE.group, fill=t0_t1.Diff,
+           colour=t0_t1.Diff)) +
+  geom_jitter(alpha=0.5, 
+              position=position_jitterdodge(jitter.width=0.5)) +
+  #geom_boxplot(colour="black") + 
+  theme_mike() +
+  #scale_fill_Publication(values=c("darkblue", "yellow", "darkred")) +
+  scale_colour_manual(values=c("darkblue", "yellow", "darkred")) +
+  theme(axis.text.x=element_text(angle=90, vjust=0.5)) +
+  labs(x="CpG island size interval (kb)",
+       y=expression(paste("CV"^2))) +
+  guides(colour=FALSE, fill=FALSE) +
+  theme(axis.text=element_text(size=16),
+        axis.title=element_text(size=16))
+
+ggsave(lps.cv2.by.cgi,
+       filename="~/Dropbox/Noise_genomics/Figures/ms_figures/BMDC_LPS-CGIsize-CV2-scatter.png",
+       width=7.75, height=4.25, dpi=300)
+
+lps.cv2.by.cgi.cdf <- ggplot(lps.0h.genomic[lps.0h.genomic$N_CpG == 1,],
+       aes(x=CV2,
+           colour=t0_t1.Diff)) +
+  stat_ecdf() +
+  theme_mike() +
+  #scale_fill_Publication(values=c("darkblue", "yellow", "darkred")) +
+  scale_colour_manual(values=c("darkblue", "yellow", "darkred")) +
+  theme(axis.text.x=element_text(angle=90, vjust=0.5)) +
+  labs(x="CpG island size interval (kb)",
+       y=expression(paste("CV"^2))) +
+  facet_wrap(~CGI_SIZE.group,
+             ncol=3) +
+  guides(colour=FALSE, fill=FALSE)
+
+ggsave(lps.cv2.by.cgi.cdf,
+       filename="~/Dropbox/Noise_genomics/Figures/ms_figures/BMDC_LPS-CGIsize-CV2-ecdf.png",
+       width=7.75, height=4.25, dpi=300)
+
+raw.x <- lps.0h.genomic$CV2[lps.0h.genomic$N_CpG == 1 & lps.0h.genomic$t0_t1.Diff == 1]
+raw.y <- lps.0h.genomic$CV2[lps.0h.genomic$N_CpG == 1 & lps.0h.genomic$t0_t1.Diff == 0]
+raw.down <- lps.0h.genomic$CV2[lps.0h.genomic$N_CpG == 1 & lps.0h.genomic$t0_t1.Diff == -1]
+ks.test(raw.x, raw.y, alternative="less")
+ks.test(raw.x, raw.down, alternative="less")$p.value
+
+## set up a kolmogorov-smirnoff test between the undiff and up-diff for each CpG island size interval
+# (0,0.5]
+int1.x <- lps.0h.genomic$CV2[lps.0h.genomic$CGI_SIZE.group == "(0,0.5]" & lps.0h.genomic$t0_t1.Diff == 1]
+int1.y <- lps.0h.genomic$CV2[lps.0h.genomic$CGI_SIZE.group == "(0,0.5]" & lps.0h.genomic$t0_t1.Diff == 0]
+ks.test(int1.x, int1.y, alternative="less")
+
+# (0.5,1]
+int2.x <- lps.0h.genomic$CV2[lps.0h.genomic$CGI_SIZE.group == "(0.5,1]" & lps.0h.genomic$t0_t1.Diff == 1]
+int2.y <- lps.0h.genomic$CV2[lps.0h.genomic$CGI_SIZE.group == "(0.5,1]" & lps.0h.genomic$t0_t1.Diff == 0]
+ks.test(int2.x, int2.y, alternative="less")
+
+# (1,1.5]
+int3.x <- lps.0h.genomic$CV2[lps.0h.genomic$CGI_SIZE.group == "(1,1.5]" & lps.0h.genomic$t0_t1.Diff == 1]
+int3.y <- lps.0h.genomic$CV2[lps.0h.genomic$CGI_SIZE.group == "(1,1.5]" & lps.0h.genomic$t0_t1.Diff == 0]
+ks.test(int3.x, int3.y, alternative="less")
+
+# (1.5,2]
+int4.x <- lps.0h.genomic$CV2[lps.0h.genomic$CGI_SIZE.group == "(1.5,2]" & lps.0h.genomic$t0_t1.Diff == 1]
+int4.y <- lps.0h.genomic$CV2[lps.0h.genomic$CGI_SIZE.group == "(1.5,2]" & lps.0h.genomic$t0_t1.Diff == 0]
+ks.test(int4.x, int4.y, alternative="less")
+
+# (2,2.5]
+int5.x <- lps.0h.genomic$CV2[lps.0h.genomic$CGI_SIZE.group == "(2,2.5]" & lps.0h.genomic$t0_t1.Diff == 1]
+int5.y <- lps.0h.genomic$CV2[lps.0h.genomic$CGI_SIZE.group == "(2,2.5]" & lps.0h.genomic$t0_t1.Diff == 0]
+ks.test(int5.x, int5.y, alternative="less")
+
+#########
+## PIC ##
+#########
+# calculate the variability in expression at the 0h
+
+pic.0h.cells <- na.omit(bmdc.meta$Sample[bmdc.meta$Timepoint == "0h"])
+pic.0h.mean <- rowMeans(bmdc.pic.exprs[, pic.0h.cells])
+pic.0h.var <- apply(bmdc.pic.exprs[, pic.0h.cells], 1, var)
+pic.0h.cv2 <- pic.0h.var/(pic.0h.mean**2)
+
+# calculate the residual CV^2
+useForFit <- is.na(pic.0h.cv2) | pic.0h.mean < 0.1 | is.na(1/pic.0h.mean)
+
+smoothScatter(x=pic.0h.mean[!useForFit], y=pic.0h.cv2[!useForFit])
+
+# fit with a gamma-distributed GLM
+fit <- glmgam.fit(cbind(a0 = 1, a1tilde=1/pic.0h.mean[!useForFit]), 
+                  pic.0h.cv2[!useForFit])
+pic.0h.rCV2 <- fitted.values(fit) - pic.0h.cv2[!useForFit]
+
+# plot gene expression varibility Vs logFC
+pic.0h.sum <- do.call(cbind.data.frame,
+                      list("Mean"=pic.0h.mean[!useForFit],
+                           "CV2"=pic.0h.cv2[!useForFit],
+                           "rCV2"=pic.0h.rCV2,
+                           "gene_id"=rownames(bmdc.pic.exprs)[!useForFit]))
+
+# merge with genomic features
+pic.0h.demerge <- merge(pic.0h.sum, bmdc.pic.de.res.0v1, by='gene_id')
+pic.0h.genomic <- merge(pic.0h.demerge, mouse.genomic.features, by.x='gene_id', by.y='GENE')
+
+# split CGIs into size bins on quartiles
+pic.0h.genomic$CGI_SIZE.group <- as.character(cut(pic.0h.genomic$CGI_SIZE.kb,
+                                                  breaks=c(0.5, 1.0, 1.5, 2.0, 2.5, 3.0)))
+pic.0h.genomic$CGI_SIZE.group[(pic.0h.genomic$CGI_SIZE.kb <= 0.5)] <- "(0,0.5]"
+pic.0h.genomic$CGI_SIZE.group[(pic.0h.genomic$CGI_SIZE.kb > 3.0)] <- "(3,4.585]"
+pic.0h.genomic$CGI_SIZE.group[is.na(pic.0h.genomic$CGI_SIZE.group) | pic.0h.genomic$CGI_SIZE.kb == 0] <- "Absent"
+pic.0h.genomic$CGI_SIZE.group <- factor(pic.0h.genomic$CGI_SIZE.group,
+                                        labels=c("Absent", "(0,0.5]", "(0.5,1]", "(1,1.5]",  "(1.5,2]", "(2,2.5]",
+                                                 "(2.5,3]", "(3,4.585]"),
+                                        levels=c("Absent", "(0,0.5]", "(0.5,1]", "(1,1.5]",  "(1.5,2]", "(2,2.5]",
+                                                 "(2.5,3]", "(3,4.585]"))
+
+pic.cv2.by.cgi <- ggplot(pic.0h.genomic[pic.0h.genomic$N_CpG == 1,],
+       aes(y=CV2, x=CGI_SIZE.group, fill=t0_t1.Diff,
+           colour=t0_t1.Diff)) +
+  geom_jitter(alpha=0.5, 
+              position=position_jitterdodge(jitter.width=0.5)) +
+  #geom_boxplot(colour="black") + 
+  theme_mike() +
+  #scale_fill_Publication(values=c("darkblue", "yellow", "darkred")) +
+  scale_colour_manual(values=c("darkblue", "yellow", "darkred")) +
+  theme(axis.text.x=element_text(angle=90, vjust=0.5)) +
+  labs(x="CpG island size interval (kb)",
+       y=expression(paste("CV"^2)))
+
+pic.cv2.by.cgi.cdf <- ggplot(pic.0h.genomic[pic.0h.genomic$N_CpG == 1,],
+       aes(x=CV2,
+           colour=t0_t1.Diff)) +
+  stat_ecdf() +
+  theme_mike() +
+  #scale_fill_Publication(values=c("darkblue", "yellow", "darkred")) +
+  scale_colour_manual(values=c("darkblue", "yellow", "darkred")) +
+  theme(axis.text.x=element_text(angle=90, vjust=0.5)) +
+  labs(x="CpG island size interval (kb)",
+       y=expression(paste("CV"^2))) +
+  facet_wrap(~CGI_SIZE.group,
+             ncol=3)
+
+## set up a kolmogorov-smirnoff test between the undiff and up-diff for each CpG island size interval
+# (0,0.5]
+int1.x <- pic.0h.genomic$CV2[pic.0h.genomic$CGI_SIZE.group == "(0,0.5]" & pic.0h.genomic$t0_t1.Diff == 1]
+int1.y <- pic.0h.genomic$CV2[pic.0h.genomic$CGI_SIZE.group == "(0,0.5]" & pic.0h.genomic$t0_t1.Diff == 0]
+ks.test(int1.x, int1.y)
+
+# (0.5,1]
+int2.x <- pic.0h.genomic$CV2[pic.0h.genomic$CGI_SIZE.group == "(0.5,1]" & pic.0h.genomic$t0_t1.Diff == 1]
+int2.y <- pic.0h.genomic$CV2[pic.0h.genomic$CGI_SIZE.group == "(0.5,1]" & pic.0h.genomic$t0_t1.Diff == 0]
+ks.test(int2.x, int2.y)
+
+# (1,1.5]
+int3.x <- pic.0h.genomic$CV2[pic.0h.genomic$CGI_SIZE.group == "(1,1.5]" & pic.0h.genomic$t0_t1.Diff == 1]
+int3.y <- pic.0h.genomic$CV2[pic.0h.genomic$CGI_SIZE.group == "(1,1.5]" & pic.0h.genomic$t0_t1.Diff == 0]
+ks.test(int3.x, int3.y)
+
+# (1.5,2]
+int4.x <- pic.0h.genomic$CV2[pic.0h.genomic$CGI_SIZE.group == "(1.5,2]" & pic.0h.genomic$t0_t1.Diff == 1]
+int4.y <- pic.0h.genomic$CV2[pic.0h.genomic$CGI_SIZE.group == "(1.5,2]" & pic.0h.genomic$t0_t1.Diff == 0]
+ks.test(int4.x, int4.y)
+
+# (2,2.5]
+int5.x <- pic.0h.genomic$CV2[pic.0h.genomic$CGI_SIZE.group == "(2,2.5]" & pic.0h.genomic$t0_t1.Diff == 1]
+int5.y <- pic.0h.genomic$CV2[pic.0h.genomic$CGI_SIZE.group == "(2,2.5]" & pic.0h.genomic$t0_t1.Diff == 0]
+ks.test(int5.x, int5.y)
+
+
+#########
+## PAM ##
+#########
+# calculate the variability in expression at the 0h
+
+pam.0h.cells <- na.omit(bmdc.meta$Sample[bmdc.meta$Timepoint == "0h"])
+pam.0h.mean <- rowMeans(bmdc.pam.exprs[, pam.0h.cells])
+pam.0h.var <- apply(bmdc.pam.exprs[, pam.0h.cells], 1, var)
+pam.0h.cv2 <- pam.0h.var/(pam.0h.mean**2)
+
+# calculate the residual CV^2
+useForFit <- is.na(pam.0h.cv2) | pam.0h.mean < 0.1 | is.na(1/pam.0h.mean)
+
+smoothScatter(x=pam.0h.mean[!useForFit], y=pam.0h.cv2[!useForFit])
+
+# fit with a gamma-distributed GLM
+fit <- glmgam.fit(cbind(a0 = 1, a1tilde=1/pam.0h.mean[!useForFit]), 
+                  pam.0h.cv2[!useForFit])
+pam.0h.rCV2 <- fitted.values(fit) - pam.0h.cv2[!useForFit]
+
+# plot gene expression varibility Vs logFC
+pam.0h.sum <- do.call(cbind.data.frame,
+                      list("Mean"=pam.0h.mean[!useForFit],
+                           "CV2"=pam.0h.cv2[!useForFit],
+                           "rCV2"=pam.0h.rCV2,
+                           "gene_id"=rownames(bmdc.pam.exprs)[!useForFit]))
+
+# merge with genomic features
+pam.0h.demerge <- merge(pam.0h.sum, bmdc.pam.de.res.0v1, by='gene_id')
+pam.0h.genomic <- merge(pam.0h.demerge, mouse.genomic.features, by.x='gene_id', by.y='GENE')
+
+# split CGIs into size bins on quartiles
+pam.0h.genomic$CGI_SIZE.group <- as.character(cut(pam.0h.genomic$CGI_SIZE.kb,
+                                                  breaks=c(0.5, 1.0, 1.5, 2.0, 2.5, 3.0)))
+pam.0h.genomic$CGI_SIZE.group[(pam.0h.genomic$CGI_SIZE.kb <= 0.5)] <- "(0,0.5]"
+pam.0h.genomic$CGI_SIZE.group[(pam.0h.genomic$CGI_SIZE.kb > 3.0)] <- "(3,4.585]"
+pam.0h.genomic$CGI_SIZE.group[is.na(pam.0h.genomic$CGI_SIZE.group) | pam.0h.genomic$CGI_SIZE.kb == 0] <- "Absent"
+pam.0h.genomic$CGI_SIZE.group <- factor(pam.0h.genomic$CGI_SIZE.group,
+                                        labels=c("Absent", "(0,0.5]", "(0.5,1]", "(1,1.5]",  "(1.5,2]", "(2,2.5]",
+                                                 "(2.5,3]", "(3,4.585]"),
+                                        levels=c("Absent", "(0,0.5]", "(0.5,1]", "(1,1.5]",  "(1.5,2]", "(2,2.5]",
+                                                 "(2.5,3]", "(3,4.585]"))
+
+pam.cv2.by.cgi <- ggplot(pam.0h.genomic[pam.0h.genomic$N_CpG == 1,],
+       aes(y=CV2, x=CGI_SIZE.group, fill=t0_t1.Diff,
+           colour=t0_t1.Diff)) +
+  geom_jitter(alpha=0.5, 
+              position=position_jitterdodge(jitter.width=0.5)) +
+  #geom_boxplot(colour="black") + 
+  theme_mike() +
+  #scale_fill_Publication(values=c("darkblue", "yellow", "darkred")) +
+  scale_colour_manual(values=c("darkblue", "yellow", "darkred")) +
+  theme(axis.text.x=element_text(angle=90, vjust=0.5)) +
+  labs(x="CpG island size interval (kb)",
+       y=expression(paste("CV"^2)))
+
+pam.cv2.by.cgi.cdf <- ggplot(pam.0h.genomic[pam.0h.genomic$N_CpG == 1,],
+       aes(x=CV2,
+           colour=t0_t1.Diff)) +
+  stat_ecdf() +
+  theme_mike() +
+  #scale_fill_Publication(values=c("darkblue", "yellow", "darkred")) +
+  scale_colour_manual(values=c("darkblue", "yellow", "darkred")) +
+  theme(axis.text.x=element_text(angle=90, vjust=0.5)) +
+  labs(x="CpG island size interval (kb)",
+       y=expression(paste("CV"^2))) +
+  facet_wrap(~CGI_SIZE.group,
+             ncol=3)
+
+## set up a kolmogorov-smirnoff test between the undiff and up-diff for each CpG island size interval
+# (0,0.5]
+int1.x <- pam.0h.genomic$CV2[pam.0h.genomic$CGI_SIZE.group == "(0,0.5]" & pam.0h.genomic$t0_t1.Diff == 1]
+int1.y <- pam.0h.genomic$CV2[pam.0h.genomic$CGI_SIZE.group == "(0,0.5]" & pam.0h.genomic$t0_t1.Diff == 0]
+ks.test(int1.x, int1.y, alternative="less")
+
+# (0.5,1]
+int2.x <- pam.0h.genomic$CV2[pam.0h.genomic$CGI_SIZE.group == "(0.5,1]" & pam.0h.genomic$t0_t1.Diff == 1]
+int2.y <- pam.0h.genomic$CV2[pam.0h.genomic$CGI_SIZE.group == "(0.5,1]" & pam.0h.genomic$t0_t1.Diff == 0]
+ks.test(int2.x, int2.y, alternative="less")
+
+# (1,1.5]
+int3.x <- pam.0h.genomic$CV2[pam.0h.genomic$CGI_SIZE.group == "(1,1.5]" & pam.0h.genomic$t0_t1.Diff == 1]
+int3.y <- pam.0h.genomic$CV2[pam.0h.genomic$CGI_SIZE.group == "(1,1.5]" & pam.0h.genomic$t0_t1.Diff == 0]
+ks.test(int3.x, int3.y, alternative="less")
+
+# (1.5,2]
+int4.x <- pam.0h.genomic$CV2[pam.0h.genomic$CGI_SIZE.group == "(1.5,2]" & pam.0h.genomic$t0_t1.Diff == 1]
+int4.y <- pam.0h.genomic$CV2[pam.0h.genomic$CGI_SIZE.group == "(1.5,2]" & pam.0h.genomic$t0_t1.Diff == 0]
+ks.test(int4.x, int4.y, alternative="less")
+
+# (2,2.5]
+int5.x <- pam.0h.genomic$CV2[pam.0h.genomic$CGI_SIZE.group == "(2,2.5]" & pam.0h.genomic$t0_t1.Diff == 1]
+int5.y <- pam.0h.genomic$CV2[pam.0h.genomic$CGI_SIZE.group == "(2,2.5]" & pam.0h.genomic$t0_t1.Diff == 0]
+ks.test(int5.x, int5.y, alternative="less")
+
+
+
+
+
 
 
 

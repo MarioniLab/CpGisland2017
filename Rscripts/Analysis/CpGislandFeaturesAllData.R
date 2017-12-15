@@ -55,9 +55,9 @@ all.lm <- ggplot(all.merge,
                      shape=Tissue,
                      alpha=Sig)) +
   geom_hline(mapping=aes(yintercept=0), linetype="dashed", colour="grey") +
-  geom_point(size=4) + 
+  geom_point(size=6) + 
   theme_mike() +
-  scale_y_continuous(limits=c(-30, 30), oob=squish) +
+  scale_y_continuous(limits=c(-50, 50), oob=squish) +
   scale_fill_manual(values=species.cols) +
   scale_shape_manual(values=c(21:25)) +
   scale_alpha_manual(values=sig.alpha) +
@@ -67,7 +67,7 @@ all.lm <- ggplot(all.merge,
              space="free_x",
              scales="free_x", switch="x") +
   theme(panel.spacing=unit(0.25, "lines"),
-        strip.text=element_text(angle=90, vjust=1, hjust=0.5,
+        strip.text=element_text(angle=90, vjust=1, hjust=0.5, size=16,
                                 family='Helvetica', face='plain'),
         strip.background=element_blank()) +
   theme(axis.text.x=element_blank(),

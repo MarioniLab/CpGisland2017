@@ -138,162 +138,64 @@ res812$gene_id <- rownames(res812)
 res812.merge <- merge(res812,  gene_symbol,
                       by.x='gene_id', by.y='entrezgene', all.x=TRUE)
 
+################################################################################################
+#### use a binomial test to find differences in the CpG island size ranks between timepoints ###
+################################################################################################
+ER.0v1.merge <- merge(res01.merge, human.genomic.features, by.x='ensembl_gene_id', by.y='GENE')
+ER.1v2.merge <- merge(res12.merge, human.genomic.features, by.x='ensembl_gene_id', by.y='GENE')
 
-# match up to CpG islands
-# 0vs1
-ER.1.up <- res01.merge$ensembl_gene_id[(res01.merge$log2FoldChange > 0) & (res01.merge$Sig == 1)]
-ER.1.up.size <- human.genomic.features$CGI_SIZE.kb[human.genomic.features$GENE %in% ER.1.up]
-ER.1.up_df <- cbind.data.frame(human.genomic.features$GENE[human.genomic.features$GENE %in% ER.1.up], ER.1.up.size)
-colnames(ER.1.up_df) <- c("GeneID", "CGI_SIZE.kb")
-ER.1.up_df$Time <- "0v1"
-ER.1.up_df$Direction <- "Up"
+# select only the up-regulated genes
+ER.0v1.merge.cgi <- ER.0v1.merge[ER.0v1.merge$CGI_SIZE.kb != 0 &
+                                   !is.na(ER.0v1.merge$CGI_SIZE.kb) &
+                                   ER.0v1.merge$log2FoldChange > 0, ]
+ER.1v2.merge.cgi <- ER.1v2.merge[ER.1v2.merge$CGI_SIZE.kb != 0 & 
+                                   !is.na(ER.1v2.merge$CGI_SIZE.kb) &
+                                   ER.1v2.merge$log2FoldChange > 0, ]
 
+# order based on t-statistic
+ER.res01.size_rank <- ER.0v1.merge.cgi$CGI_SIZE.kb[order(ER.0v1.merge.cgi$stat, decreasing=TRUE)]
+ER.res26.size_rank <- ER.1v2.merge.cgi$CGI_SIZE.kb[order(ER.1v2.merge.cgi$stat, decreasing=TRUE)]
 
-ER.1.down <- res01.merge$ensembl_gene_id[(res01.merge$log2FoldChange < 0) & (res01.merge$Sig == 1)]
-ER.1.down.size <- human.genomic.features$CGI_SIZE.kb[human.genomic.features$GENE %in% ER.1.down]
-ER.1.down_df <- cbind.data.frame(human.genomic.features$GENE[human.genomic.features$GENE %in% ER.1.down], ER.1.down.size)
-colnames(ER.1.down_df) <- c("GeneID", "CGI_SIZE.kb")
-ER.1.down_df$Time <- "0v1"
-ER.1.down_df$Direction <- "Down"
-
-
-# 1vs2
-ER.2.up <- res12.merge$ensembl_gene_id[(res12.merge$log2FoldChange > 0) & (res12.merge$Sig == 1)]
-ER.2.up.size <- human.genomic.features$CGI_SIZE.kb[human.genomic.features$GENE %in% ER.2.up]
-ER.2.up_df <- cbind.data.frame(human.genomic.features$GENE[human.genomic.features$GENE %in% ER.2.up], ER.2.up.size)
-colnames(ER.2.up_df) <- c("GeneID", "CGI_SIZE.kb")
-ER.2.up_df$Time <- "1v2"
-ER.2.up_df$Direction <- "Up"
+ER.sign.size_rank <- as.numeric(ER.res01.size_rank < ER.res26.size_rank)
+binom.test(sum(ER.sign.size_rank), n=length(ER.sign.size_rank),
+           alternative="greater")
 
 
-ER.2.down <- res12.merge$ensembl_gene_id[(res12.merge$log2FoldChange < 0) & (res12.merge$Sig == 1)]
-ER.2.down.size <- human.genomic.features$CGI_SIZE.kb[human.genomic.features$GENE %in% ER.2.down]
-ER.2.down_df <- cbind.data.frame(human.genomic.features$GENE[human.genomic.features$GENE %in% ER.2.down], ER.2.down.size)
-colnames(ER.2.down_df) <- c("GeneID", "CGI_SIZE.kb")
-ER.2.down_df$Time <- "1v2"
-ER.2.down_df$Direction <- "Down"
+# get CGI sizes for up-regulated genes at each time point
+# top 250 genes from each only
+ER.up.0v1 <- ER.0v1.merge.cgi$CGI_SIZE.kb
+ER.up.0v1 <- ER.up.0v1[order(ER.0v1.merge.cgi$stat, decreasing=TRUE)][1:250]
 
+ER.up.1v2 <- ER.1v2.merge.cgi$CGI_SIZE.kb
+ER.up.1v2 <- ER.up.1v2[order(ER.1v2.merge.cgi$stat, decreasing=TRUE)][1:250]
 
-# 2vs3
-ER.3.up <- res23.merge$ensembl_gene_id[(res23.merge$log2FoldChange > 0) & (res23.merge$Sig == 1)]
-ER.3.up.size <- human.genomic.features$CGI_SIZE.kb[human.genomic.features$GENE %in% ER.3.up]
-ER.3.up_df <- cbind.data.frame(human.genomic.features$GENE[human.genomic.features$GENE %in% ER.3.up], ER.3.up.size)
-colnames(ER.3.up_df) <- c("GeneID", "CGI_SIZE.kb")
-ER.3.up_df$Time <- "2v3"
-ER.3.up_df$Direction <- "Up"
+ER.size_list <- list("0v1"=cbind(ER.up.0v1, rep("0v1", length(ER.up.0v1))),
+                           "1v2"=cbind(ER.up.1v2, rep("1v2", length(ER.up.1v2))))
 
+ER.size.df <- data.frame(do.call(rbind, ER.size_list))
+colnames(ER.size.df) <- c("CGI_SIZE.kb", "Comparison")
+ER.size.df$CGI_SIZE.kb <- as.numeric(as.character(ER.size.df$CGI_SIZE.kb))
+ER.size.df$Comparison <- factor(ER.size.df$Comparison,
+                                      levels=c("0v1", "1v2"),
+                                      labels=c("0v1", "1v2"))
 
-ER.3.down <- res23.merge$ensembl_gene_id[(res23.merge$log2FoldChange < 0) & (res23.merge$Sig == 1)]
-ER.3.down.size <- human.genomic.features$CGI_SIZE.kb[human.genomic.features$GENE %in% ER.3.down]
-ER.3.down_df <- cbind.data.frame(human.genomic.features$GENE[human.genomic.features$GENE %in% ER.3.down], ER.3.down.size)
-colnames(ER.3.down_df) <- c("GeneID", "CGI_SIZE.kb")
-ER.3.down_df$Time <- "2v3"
-ER.3.down_df$Direction <- "Down"
-
-
-# 3vs4
-ER.4.up <- res34.merge$ensembl_gene_id[(res34.merge$log2FoldChange > 0) & (res34.merge$Sig == 1)]
-ER.4.up.size <- human.genomic.features$CGI_SIZE.kb[human.genomic.features$GENE %in% ER.4.up]
-ER.4.up_df <- cbind.data.frame(human.genomic.features$GENE[human.genomic.features$GENE %in% ER.4.up], ER.4.up.size)
-colnames(ER.4.up_df) <- c("GeneID", "CGI_SIZE.kb")
-ER.4.up_df$Time <- "3v4"
-ER.4.up_df$Direction <- "Up"
-
-
-ER.4.down <- res34.merge$ensembl_gene_id[(res34.merge$log2FoldChange < 0) & (res34.merge$Sig == 1)]
-ER.4.down.size <- human.genomic.features$CGI_SIZE.kb[human.genomic.features$GENE %in% ER.4.down]
-ER.4.down_df <- cbind.data.frame(human.genomic.features$GENE[human.genomic.features$GENE %in% ER.4.down], ER.4.down.size)
-colnames(ER.4.down_df) <- c("GeneID", "CGI_SIZE.kb")
-ER.4.down_df$Time <- "3v4"
-ER.4.down_df$Direction <- "Down"
-
-
-# 4vs5
-ER.5.up <- res45.merge$ensembl_gene_id[(res45.merge$log2FoldChange > 0) & (res45.merge$Sig == 1)]
-ER.5.up.size <- human.genomic.features$CGI_SIZE.kb[human.genomic.features$GENE %in% ER.5.up]
-ER.5.up_df <- cbind.data.frame(human.genomic.features$GENE[human.genomic.features$GENE %in% ER.5.up], ER.5.up.size)
-colnames(ER.5.up_df) <- c("GeneID", "CGI_SIZE.kb")
-ER.5.up_df$Time <- "4v5"
-ER.5.up_df$Direction <- "Up"
-
-
-ER.5.down <- res45.merge$ensembl_gene_id[(res45.merge$log2FoldChange < 0) & (res45.merge$Sig == 1)]
-ER.5.down.size <- human.genomic.features$CGI_SIZE.kb[human.genomic.features$GENE %in% ER.5.down]
-ER.5.down_df <- cbind.data.frame(human.genomic.features$GENE[human.genomic.features$GENE %in% ER.5.down], ER.5.down.size)
-colnames(ER.5.down_df) <- c("GeneID", "CGI_SIZE.kb")
-ER.5.down_df$Time <- "4v5"
-ER.5.down_df$Direction <- "Down"
-
-
-# 5vs6
-ER.6.up <- res56.merge$ensembl_gene_id[(res56.merge$log2FoldChange > 0) & (res56.merge$Sig == 1)]
-ER.6.up.size <- human.genomic.features$CGI_SIZE.kb[human.genomic.features$GENE %in% ER.6.up]
-ER.6.up_df <- cbind.data.frame(human.genomic.features$GENE[human.genomic.features$GENE %in% ER.6.up], ER.6.up.size)
-colnames(ER.6.up_df) <- c("GeneID", "CGI_SIZE.kb")
-ER.6.up_df$Time <- "5v6"
-ER.6.up_df$Direction <- "Up"
-
-
-ER.6.down <- res56.merge$ensembl_gene_id[(res56.merge$log2FoldChange < 0) & (res56.merge$Sig == 1)]
-ER.6.down.size <- human.genomic.features$CGI_SIZE.kb[human.genomic.features$GENE %in% ER.6.down]
-ER.6.down_df <- cbind.data.frame(human.genomic.features$GENE[human.genomic.features$GENE %in% ER.6.down], ER.6.down.size)
-colnames(ER.6.down_df) <- c("GeneID", "CGI_SIZE.kb")
-ER.6.down_df$Time <- "5v6"
-ER.6.down_df$Direction <- "Down"
-
-
-# 6vs8
-ER.8.up <- res68.merge$ensembl_gene_id[(res68.merge$log2FoldChange > 0) & (res68.merge$Sig == 1)]
-ER.8.up.size <- human.genomic.features$CGI_SIZE.kb[human.genomic.features$GENE %in% ER.8.up]
-ER.8.up_df <- cbind.data.frame(human.genomic.features$GENE[human.genomic.features$GENE %in% ER.8.up], ER.8.up.size)
-colnames(ER.8.up_df) <- c("GeneID", "CGI_SIZE.kb")
-ER.8.up_df$Time <- "6v8"
-ER.8.up_df$Direction <- "Up"
-
-
-ER.8.down <- res68.merge$ensembl_gene_id[(res68.merge$log2FoldChange < 0) & (res68.merge$Sig == 1)]
-ER.8.down.size <- human.genomic.features$CGI_SIZE.kb[human.genomic.features$GENE %in% ER.8.down]
-ER.8.down_df <- cbind.data.frame(human.genomic.features$GENE[human.genomic.features$GENE %in% ER.8.down], ER.8.down.size)
-colnames(ER.8.down_df) <- c("GeneID", "CGI_SIZE.kb")
-ER.8.down_df$Time <- "6v8"
-ER.8.down_df$Direction <- "Down"
-
-
-# 8vs12
-ER.12.up <- res812.merge$ensembl_gene_id[(res812.merge$log2FoldChange > 0) & (res812.merge$Sig == 1)]
-ER.12.up.size <- human.genomic.features$CGI_SIZE.kb[human.genomic.features$GENE %in% ER.12.up]
-ER.12.up_df <- cbind.data.frame(human.genomic.features$GENE[human.genomic.features$GENE %in% ER.12.up], ER.12.up.size)
-colnames(ER.12.up_df) <- c("GeneID", "CGI_SIZE.kb")
-ER.12.up_df$Time <- "8v12"
-ER.12.up_df$Direction <- "Up"
-
-
-ER.12.down <- res812.merge$ensembl_gene_id[(res812.merge$log2FoldChange < 0) & (res812.merge$Sig == 1)]
-ER.12.down.size <- human.genomic.features$CGI_SIZE.kb[human.genomic.features$GENE %in% ER.12.down]
-ER.12.down_df <- cbind.data.frame(human.genomic.features$GENE[human.genomic.features$GENE %in% ER.12.down], ER.12.down.size)
-colnames(ER.12.down_df) <- c("GeneID", "CGI_SIZE.kb")
-ER.12.down_df$Time <- "8v12"
-ER.12.down_df$Direction <- "Down"
-
-size.df <- do.call(rbind.data.frame, list(ER.1.down_df, ER.1.up_df, ER.2.down_df, ER.2.up_df, ER.3.down_df, ER.3.up_df,
-                                          ER.4.down_df, ER.4.up_df, ER.5.down_df, ER.5.up_df, ER.6.down_df, ER.6.up_df,
-                                          ER.8.down_df, ER.8.up_df, ER.12.down_df, ER.12.up_df)) 
-plot.df <- size.df[size.df$CGI_SIZE.kb != 0 & size.df$Direction == "Up",]
-
-er.size.dens <- ggplot(plot.df[plot.df$Time %in% c("0v1", "1v2"), ],
-                       aes(x=CGI_SIZE.kb, colour=Time)) +
+#################
+### plotting ####
+#################
+er.size.dens <- ggplot(ER.size.df[ER.size.df$Comparison %in% c("0v1", "1v2"), ],
+                       aes(x=CGI_SIZE.kb, colour=Comparison)) +
   geom_density(size=2, alpha=0.5) + theme_mike() +
   scale_colour_manual(values=c("#D86200", "#D8AA00")) +
   theme(axis.text=element_text(size=16)) +
   guides(colour=FALSE) +
   labs(x="CpG island Size (kb)", y="Density") +
   geom_segment(aes(y=0, yend=1.5,
-                   x=median(plot.df$CGI_SIZE.kb[plot.df$Time == "0v1"]),
-                   xend=median(plot.df$CGI_SIZE.kb[plot.df$Time == "0v1"])),
+                   x=median(ER.size.df$CGI_SIZE.kb[ER.size.df$Comparison == "0v1"]),
+                   xend=median(ER.size.df$CGI_SIZE.kb[ER.size.df$Comparison == "0v1"])),
                linetype="dashed", colour="#D86200", size=2) +
   geom_segment(aes(y=0, yend=1.5,
-                   x=median(plot.df$CGI_SIZE.kb[plot.df$Time == "1v2"]),
-                   xend=median(plot.df$CGI_SIZE.kb[plot.df$Time == "1v2"])),
+                   x=median(ER.size.df$CGI_SIZE.kb[ER.size.df$Comparison == "1v2"]),
+                   xend=median(ER.size.df$CGI_SIZE.kb[ER.size.df$Comparison == "1v2"])),
                linetype="dashed", colour="#D8AA00", size=2) +
   scale_x_continuous(limits=c(0, 3), oob=censor)
 er.size.dens
@@ -302,8 +204,8 @@ ggsave(er.size.dens,
        filename="~/Dropbox/Noise_genomics/Figures/ms_figures/MCF7_ER-CGIsize_density.png",
        height=4.25, width=4.75, dpi=300)
 
-er.size.box <- ggplot(plot.df[plot.df$Time %in% c("0v1", "1v2"), ],
-                       aes(x=Time, y=CGI_SIZE.kb, fill=Time)) +
+er.size.box <- ggplot(ER.size.df[ER.size.df$Comparison %in% c("0v1", "1v2"), ],
+                      aes(x=Comparison, y=CGI_SIZE.kb, fill=Comparison)) +
   geom_boxplot() +
   theme_mike() +
   scale_fill_manual(values=c("#D86200", "#D8AA00")) +
@@ -316,3 +218,8 @@ er.size.box
 ggsave(er.size.box,
        filename="~/Dropbox/Noise_genomics/Figures/ms_figures/MCF7_ER-CGIsize_boxplot.png",
        height=4.25, width=3.25, dpi=300)
+
+
+
+
+
