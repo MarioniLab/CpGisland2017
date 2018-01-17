@@ -122,7 +122,7 @@ dev.off()
 minMeanForFit <- unname(quantile(mesc.gene.summary$Mean[which(mesc.gene.summary$CV2 > 0.2)], 0.8))
 
 # select genes with mean value greater than min value for fitting
-useForFit <- 1/mesc.gene.summary$Mean <= 0
+useForFit <- 1/mesc.gene.summary$Mean <= 0.05
 
 # fit with a gamma-distributed GLM
 fit <- glmgam.fit(cbind(a0 = 1, a1tilde=1/mesc.gene.summary$Mean[!useForFit]), 

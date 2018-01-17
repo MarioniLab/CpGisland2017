@@ -57,7 +57,7 @@ all.lm <- ggplot(all.merge,
   geom_hline(mapping=aes(yintercept=0), linetype="dashed", colour="grey") +
   geom_point(size=6) + 
   theme_mike() +
-  scale_y_continuous(limits=c(-50, 50), oob=squish) +
+  scale_y_continuous(limits=c(-30, 30), oob=squish) +
   scale_fill_manual(values=species.cols) +
   scale_shape_manual(values=c(21:25)) +
   scale_alpha_manual(values=sig.alpha) +

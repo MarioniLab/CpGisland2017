@@ -81,62 +81,62 @@ res23$gene_id <- rownames(res23)
 res23.merge <- merge(res23,  gene_symbol,
                      by.x='gene_id', by.y='entrezgene', all.x=TRUE)
 
-## 3hr vs 4hr
-de <- results(dds, contrast=c("Timepoint", "4hrs", "3hrs"))
-res34 <- as.data.frame(lfcShrink(dds, res=de, contrast=c("Timepoint", "4hrs", "3hrs")))
-
-res34$padj[is.na(res34$padj)] <- 1.0
-res34$Sig <- as.factor(as.numeric(res34$padj <= 0.01))
-
-res34$gene_id <- rownames(res34)
-res34.merge <- merge(res34,  gene_symbol,
-                     by.x='gene_id', by.y='entrezgene', all.x=TRUE)
-
-## 4hr vs 5hr
-de <- results(dds, contrast=c("Timepoint", "5hrs", "4hrs"))
-res45 <- as.data.frame(lfcShrink(dds, res=de, contrast=c("Timepoint", "4hrs", "5hrs")))
-
-res45$padj[is.na(res45$padj)] <- 1.0
-res45$Sig <- as.factor(as.numeric(res45$padj <= 0.01))
-
-res45$gene_id <- rownames(res45)
-res45.merge <- merge(res45,  gene_symbol,
-                     by.x='gene_id', by.y='entrezgene', all.x=TRUE)
-
-## 5hr vs 6hr
-de <- results(dds, contrast=c("Timepoint", "5hrs", "6hrs"))
-res56 <- as.data.frame(lfcShrink(dds, res=de, contrast=c("Timepoint", "5hrs", "6hrs")))
-
-res56$padj[is.na(res56$padj)] <- 1.0
-res56$Sig <- as.factor(as.numeric(res56$padj <= 0.01))
-
-res56$gene_id <- rownames(res56)
-res56.merge <- merge(res56,  gene_symbol,
-                     by.x='gene_id', by.y='entrezgene', all.x=TRUE)
-
-
-## 6hr vs 8hr
-de <- results(dds, contrast=c("Timepoint", "6hrs", "8hrs"))
-res68 <- as.data.frame(lfcShrink(dds, res=de, contrast=c("Timepoint", "6hrs", "8hrs")))
-
-res68$padj[is.na(res68$padj)] <- 1.0
-res68$Sig <- as.factor(as.numeric(res68$padj <= 0.01))
-
-res68$gene_id <- rownames(res68)
-res68.merge <- merge(res68,  gene_symbol,
-                     by.x='gene_id', by.y='entrezgene', all.x=TRUE)
-
-
-## 8hr vs 12hr
-de <- results(dds, contrast=c("Timepoint", "8hrs", "12hrs"))
-res812 <- as.data.frame(lfcShrink(dds, res=de, contrast=c("Timepoint", "8hrs", "12hrs")))
-
-res812$padj[is.na(res812$padj)] <- 1.0
-res812$Sig <- as.factor(as.numeric(res812$padj <= 0.01))
-
-res812$gene_id <- rownames(res812)
-res812.merge <- merge(res812,  gene_symbol,
-                      by.x='gene_id', by.y='entrezgene', all.x=TRUE)
+# ## 3hr vs 4hr
+# de <- results(dds, contrast=c("Timepoint", "4hrs", "3hrs"))
+# res34 <- as.data.frame(lfcShrink(dds, res=de, contrast=c("Timepoint", "4hrs", "3hrs")))
+# 
+# res34$padj[is.na(res34$padj)] <- 1.0
+# res34$Sig <- as.factor(as.numeric(res34$padj <= 0.01))
+# 
+# res34$gene_id <- rownames(res34)
+# res34.merge <- merge(res34,  gene_symbol,
+#                      by.x='gene_id', by.y='entrezgene', all.x=TRUE)
+# 
+# ## 4hr vs 5hr
+# de <- results(dds, contrast=c("Timepoint", "5hrs", "4hrs"))
+# res45 <- as.data.frame(lfcShrink(dds, res=de, contrast=c("Timepoint", "4hrs", "5hrs")))
+# 
+# res45$padj[is.na(res45$padj)] <- 1.0
+# res45$Sig <- as.factor(as.numeric(res45$padj <= 0.01))
+# 
+# res45$gene_id <- rownames(res45)
+# res45.merge <- merge(res45,  gene_symbol,
+#                      by.x='gene_id', by.y='entrezgene', all.x=TRUE)
+# 
+# ## 5hr vs 6hr
+# de <- results(dds, contrast=c("Timepoint", "5hrs", "6hrs"))
+# res56 <- as.data.frame(lfcShrink(dds, res=de, contrast=c("Timepoint", "5hrs", "6hrs")))
+# 
+# res56$padj[is.na(res56$padj)] <- 1.0
+# res56$Sig <- as.factor(as.numeric(res56$padj <= 0.01))
+# 
+# res56$gene_id <- rownames(res56)
+# res56.merge <- merge(res56,  gene_symbol,
+#                      by.x='gene_id', by.y='entrezgene', all.x=TRUE)
+# 
+# 
+# ## 6hr vs 8hr
+# de <- results(dds, contrast=c("Timepoint", "6hrs", "8hrs"))
+# res68 <- as.data.frame(lfcShrink(dds, res=de, contrast=c("Timepoint", "6hrs", "8hrs")))
+# 
+# res68$padj[is.na(res68$padj)] <- 1.0
+# res68$Sig <- as.factor(as.numeric(res68$padj <= 0.01))
+# 
+# res68$gene_id <- rownames(res68)
+# res68.merge <- merge(res68,  gene_symbol,
+#                      by.x='gene_id', by.y='entrezgene', all.x=TRUE)
+# 
+# 
+# ## 8hr vs 12hr
+# de <- results(dds, contrast=c("Timepoint", "8hrs", "12hrs"))
+# res812 <- as.data.frame(lfcShrink(dds, res=de, contrast=c("Timepoint", "8hrs", "12hrs")))
+# 
+# res812$padj[is.na(res812$padj)] <- 1.0
+# res812$Sig <- as.factor(as.numeric(res812$padj <= 0.01))
+# 
+# res812$gene_id <- rownames(res812)
+# res812.merge <- merge(res812,  gene_symbol,
+#                       by.x='gene_id', by.y='entrezgene', all.x=TRUE)
 
 ################################################################################################
 #### use a binomial test to find differences in the CpG island size ranks between timepoints ###
@@ -219,6 +219,73 @@ ggsave(er.size.box,
        filename="~/Dropbox/Noise_genomics/Figures/ms_figures/MCF7_ER-CGIsize_boxplot.png",
        height=4.25, width=3.25, dpi=300)
 
+
+# plot heatmap of ranked CpG island size
+# to illustrate how I test for an enrichment of short CpG island genes
+
+
+#############
+## ERalpha ##
+#############
+ER.diff.df <- do.call(cbind.data.frame,
+                       list("SizeDiff"=ER.sign.size_rank,
+                            "Size"=ER.res26.size_rank))
+ER.diff.df$Comparison <- "Test"
+
+ER.null.df <- do.call(cbind.data.frame,
+                       list("SizeDiff"=rbinom(n=length(ER.res26.size_rank),
+                                              size=1, prob=0.5),
+                            "Size"=ER.res01.size_rank))
+ER.null.df$Comparison <- "Null"
+
+ER.binom.df <- do.call(rbind.data.frame,
+                        list("0v1"=ER.diff.df,
+                             "null"=ER.null.df))
+
+ER.binom.df$Comparison <- factor(ER.binom.df$Comparison,
+                                  levels=c("Null", "Test"),
+                                  labels=c("Null", "Test"))
+
+ER.0v1.heat <- ggplot(ER.binom.df,
+                       aes(x=Size, y=Comparison)) +
+  geom_tile(aes(fill=SizeDiff)) +
+  scale_fill_gradient(low="grey", high="darkred") +
+  scale_x_continuous(limits=c(0, 3), oob=censor) +
+  theme_mike()  +
+  theme(panel.grid=element_blank()) +
+  labs(x="CpG island size (kb)", y="Comparison") +
+  guides(fill=FALSE)
+ER.0v1.heat
+
+
+ggsave(ER.0v1.heat,
+       filename="~/Dropbox/Noise_genomics/Figures/ms_figures/MCF7_ER-binom_heat.png",
+       width=8.25, height=2.25, dpi=300)
+
+
+fc.01.df <- do.call(cbind.data.frame,
+                    list("FC"=ER.0v1.merge.cgi$log2FoldChange,
+                         "Size"=ER.0v1.merge.cgi$CGI_SIZE.kb))
+fc.01.df$Comparison <- "0v1"
+
+fc.121.df <- do.call(cbind.data.frame,
+                    list("FC"=ER.1v2.merge.cgi$log2FoldChange,
+                         "Size"=ER.1v2.merge.cgi$CGI_SIZE.kb))
+fc.121.df$Comparison <- "1v2"
+
+fc.df <- do.call(rbind.data.frame,
+                 list("0v1"=fc.01.df,
+                      "1v2"=fc.121.df))
+
+ggplot(fc.df,
+       aes(y=FC, x=Comparison)) +
+  geom_tile(aes(colour=FC), size=1) +
+  scale_colour_gradient(low="lightyellow", high="darkred") +
+  theme_mike()  +
+  theme(panel.grid=element_blank()) +
+  labs(y=expression(paste("Log"[2], " fold change")),
+       x="Comparison") +
+  guides(fill=FALSE)
 
 
 

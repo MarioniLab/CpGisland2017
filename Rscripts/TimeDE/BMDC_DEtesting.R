@@ -19,6 +19,7 @@ source("~/Dropbox/R_sessions/Noise/genomic_noise_features.R")
 source("~/Dropbox/R_sessions/GGMike/theme_mike.R")
 source("~/Dropbox/R_sessions/SingleCellFunctions/single_cell_functions.R")
 mouse.genomic.features$CGI_SIZE.kb <- mouse.genomic.features$CGI_SIZE/1000
+genomic.features$CGI_SIZE.kb <- genomic.features$CGI_SIZE/1000
 
 ensembl <- useEnsembl(biomart='ensembl', dataset='mmusculus_gene_ensembl', GRCh=37)
 
@@ -315,7 +316,7 @@ bmdc.lps.de_list <- list("t0_t1"=bmdc.lps.de.res.0v1,
 bmdc.lps_de.merge <- Reduce(x=bmdc.lps.de_list,
                             f=function(x, y) merge(x, y, by=c('gene_id')))
 
-bmdc.lps.genomic <- merge(genomic.features, bmdc.lps_de.merge, by.x='GENE', by.y='gene_id')
+bmdc.lps.genomic <- merge(mouse.genomic.features, bmdc.lps_de.merge, by.x='GENE', by.y='gene_id')
 bmdc.lps.genomic$CGI_SIZE.kb <- bmdc.lps.genomic$CGI_SIZE/1000
 
 ## PAM ##
@@ -339,7 +340,7 @@ bmdc.pam.de_list <- list("t0_t1"=bmdc.pam.de.res.0v1,
 bmdc.pam_de.merge <- Reduce(x=bmdc.pam.de_list,
                             f=function(x, y) merge(x, y, by=c('gene_id')))
 
-bmdc.pam.genomic <- merge(genomic.features, bmdc.pam_de.merge, by.x='GENE', by.y='gene_id')
+bmdc.pam.genomic <- merge(mouse.genomic.features, bmdc.pam_de.merge, by.x='GENE', by.y='gene_id')
 bmdc.pam.genomic$CGI_SIZE.kb <- bmdc.pam.genomic$CGI_SIZE/1000
 
 ## PIC ##
@@ -364,8 +365,7 @@ bmdc.pic.de_list <- list("t0_t1"=bmdc.pic.de.res.0v1,
 bmdc.pic_de.merge <- Reduce(x=bmdc.pic.de_list,
                             f=function(x, y) merge(x, y, by=c('gene_id')))
 
-bmdc.pic.genomic <- merge(genomic.features, bmdc.pic_de.merge, by.x='GENE', by.y='gene_id')
-bmdc.pic.genomic$CGI_SIZE.kb <- bmdc.pic.genomic$CGI_SIZE/1000
+bmdc.pic.genomic <- merge(mouse.genomic.features, bmdc.pic_de.merge, by.x='GENE', by.y='gene_id')
 
 ################################################################################################
 #### use a binomial test to find differences in the CpG island size ranks between timepoints ###
@@ -373,8 +373,8 @@ bmdc.pic.genomic$CGI_SIZE.kb <- bmdc.pic.genomic$CGI_SIZE/1000
 ###########
 ### LPS ###
 ###########
-bmdc.lps.0v1.merge <- merge(bmdc.lps.de.res.0v1, genomic.features, by.x='gene_id', by.y='GENE')
-bmdc.lps.1v2.merge <- merge(bmdc.lps.de.res.1v2, genomic.features, by.x='gene_id', by.y='GENE')
+bmdc.lps.0v1.merge <- merge(bmdc.lps.de.res.0v1, mouse.genomic.features, by.x='gene_id', by.y='GENE')
+bmdc.lps.1v2.merge <- merge(bmdc.lps.de.res.1v2, mouse.genomic.features, by.x='gene_id', by.y='GENE')
 
 # select only the up-regulated genes
 bmdc.lps.0v1.merge.cgi <- bmdc.lps.0v1.merge[bmdc.lps.0v1.merge$CGI_SIZE.kb != 0 &
@@ -396,8 +396,8 @@ binom.test(sum(bmdc.lps.sign.size_rank), n=length(bmdc.lps.sign.size_rank),
 ### PIC ###
 ###########
 
-bmdc.pic.0v1.merge <- merge(bmdc.pic.de.res.0v1, genomic.features, by.x='gene_id', by.y='GENE')
-bmdc.pic.1v2.merge <- merge(bmdc.pic.de.res.1v2, genomic.features, by.x='gene_id', by.y='GENE')
+bmdc.pic.0v1.merge <- merge(bmdc.pic.de.res.0v1, mouse.genomic.features, by.x='gene_id', by.y='GENE')
+bmdc.pic.1v2.merge <- merge(bmdc.pic.de.res.1v2, mouse.genomic.features, by.x='gene_id', by.y='GENE')
 
 # select only the up-regulated genes
 bmdc.pic.0v1.merge.cgi <- bmdc.pic.0v1.merge[bmdc.pic.0v1.merge$CGI_SIZE.kb != 0 &
@@ -420,8 +420,8 @@ binom.test(sum(bmdc.pic.sign.size_rank), n=length(bmdc.pic.sign.size_rank),
 ### PAM ###
 ###########
 
-bmdc.pam.0v1.merge <- merge(bmdc.pam.de.res.0v1, genomic.features, by.x='gene_id', by.y='GENE')
-bmdc.pam.1v2.merge <- merge(bmdc.pam.de.res.1v2, genomic.features, by.x='gene_id', by.y='GENE')
+bmdc.pam.0v1.merge <- merge(bmdc.pam.de.res.0v1, mouse.genomic.features, by.x='gene_id', by.y='GENE')
+bmdc.pam.1v2.merge <- merge(bmdc.pam.de.res.1v2, mouse.genomic.features, by.x='gene_id', by.y='GENE')
 
 # select only the up-regulated genes
 bmdc.pam.0v1.merge.cgi <- bmdc.pam.0v1.merge[bmdc.pam.0v1.merge$CGI_SIZE.kb != 0 &
@@ -920,5 +920,44 @@ ks.test(int5.x, int5.y, alternative="less")
 
 
 
+
+# plot heatmap of ranked CpG island size
+# these are displayed under the density plots
+# to illustrate how there is an enrichment of short CpG island genes
+#########
+## LPS ##
+#########
+lps.diff.df <- do.call(cbind.data.frame,
+                       list("SizeDiff"=bmdc.lps.sign.size_rank,
+                            "Size"=bmdc.lps.res01.size_rank))
+lps.diff.df$Comparison <- "Test"
+
+lps.null.df <- do.call(cbind.data.frame,
+                       list("SizeDiff"=rbinom(n=length(bmdc.lps.res01.size_rank),
+                                           size=1, prob=0.5),
+                            "Size"=bmdc.lps.res01.size_rank))
+lps.null.df$Comparison <- "Null"
+
+lps.binom.df <- do.call(rbind.data.frame,
+                        list("0v1"=lps.diff.df,
+                             "null"=lps.null.df))
+
+lps.binom.df$Comparison <- factor(lps.binom.df$Comparison,
+                                  levels=c("Null", "Test"),
+                                  labels=c("Null", "Test"))
+
+lps.0v1.heat <- ggplot(lps.binom.df,
+                       aes(x=Size, y=Comparison)) +
+  geom_tile(aes(fill=SizeDiff)) +
+  scale_fill_gradient(low="grey", high="darkred") +
+  scale_x_continuous(limits=c(0, 3), oob=censor) +
+  theme_mike()  +
+  theme(panel.grid=element_blank()) +
+  labs(x="CpG island size (kb)", y="Comparison") +
+  guides(fill=FALSE)
+
+ggsave(lps.0v1.heat,
+       filename="~/Dropbox/Noise_genomics/Figures/ms_figures/BMDC_LPS-binom_heat.png",
+       width=8.25, height=2.25, dpi=300)
 
 
