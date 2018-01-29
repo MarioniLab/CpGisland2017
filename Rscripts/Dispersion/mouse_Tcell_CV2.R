@@ -33,13 +33,13 @@ tcell.gene.summary <- tcell.gene.summary[(!tcell.gene.summary$CountMean < 0), ]
 minMeanForFit <- unname(quantile(tcell.gene.summary$Mean[which(tcell.gene.summary$CV2 > 0.2)], 0.8))
 
 # select genes with mean value greater than min value for fitting
-useForFit <- 1/tcell.gene.summary$Mean <= 0.05
+useForFit <- tcell.gene.summary$Mean <= 0.1
 
 # fit with a gamma-distributed GLM
 tcell.fit <- glmgam.fit(cbind(a0 = 1, a1tilde=1/tcell.gene.summary$Mean[!useForFit]), 
                         tcell.gene.summary$CV2[!useForFit])
 
-tcell.gene.summary$Residual.CV2[!useForFit] <- fitted.values(tcell.fit) - tcell.gene.summary$CV2[!useForFit]
+tcell.gene.summary$Residual.CV2[!useForFit] <- abs(tcell.gene.summary$CV2[!useForFit] - fitted.values(tcell.fit))
 tcell.gene.summary$Recip.means[!useForFit] <- 1/tcell.gene.summary$Mean[!useForFit]
 
 ################################

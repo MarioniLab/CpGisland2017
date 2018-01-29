@@ -2,6 +2,7 @@ library(ggplot2)
 library(scales)
 library(data.table)
 library(cowplot)
+library(robustbase)
 source("~/Dropbox/R_sessions/Noise/mESC_chromHMM.R")
 source("~/Dropbox/R_sessions/Noise/genomic_noise_features.R")
 source("~/Dropbox/R_sessions/Noise/mESC_genomic_noise_features.R")
@@ -115,38 +116,29 @@ ggsave(chip.boundary,
 ## univariate robust linear regression ##
 #########################################
 # this is plotting for presentation/manuscript figures
-mesc.vars <- c("H3K27me3", "H3K4me3", "cpg_RATIO", "CGI_SIZE.kb")
+mesc.vars <- c("H3K27me3", "H3K4me3", "CGI_SIZE.kb")
 mesc.univariate_list <- list()
+model.control <- lmrob.control(max.it=500, k.max=500, rel.tol=1e-7)
 
 for(x in seq_along(mesc.vars)){
-  .variable <- paste(c("Recip.Mean", mesc.vars[x]), collapse=" + ")
+  .variable <- paste(mesc.vars[x], collapse=" + ")
   .glm.form <- as.formula(paste("Residual.CV2", .variable, sep=" ~ "))
   
-  m.rlm <- rlm(.glm.form, data=mesc.merge)
+  m.rlm <- lmrob(.glm.form, data=mesc.merge, control=model.control)
   m.robust <- summary(m.rlm)
   m.rlm.res <- as.data.frame(m.robust$coefficients)
-  m.rlm.res$Pval <- 2*pt(-abs(m.rlm.res[, 3]), df=3)
-  m.rlm.res$Sig <- as.numeric(m.rlm.res$Pval <= 0.05)
+  m.rlm.res$Sig <- as.numeric(m.rlm.res$`Pr(>|t|)` <= 0.05)
   m.res.mat <- as.matrix(m.rlm.res)
-  m.res.var <- m.res.mat[3, ]
+  m.res.var <- m.res.mat[2, ]
   names(m.res.var) <- c("COEFF", "SE", "STAT", "P", "Sig")
   mesc.univariate_list[[mesc.vars[x]]] <- as.list(m.res.var)
 }
 
-# add the mean expression on it's own
-.glm.form <- as.formula(paste("Residual.CV2", "Recip.Mean", sep=" ~ "))
-
-m.rlm <- rlm(.glm.form, data=mesc.merge)
-m.robust <- summary(m.rlm)
-m.rlm.res <- as.data.frame(m.robust$coefficients)
-m.rlm.res$Pval <- 2*pt(-abs(m.rlm.res[, 3]), df=3)
-m.rlm.res$Sig <- as.numeric(m.rlm.res$Pval <= 0.05)
-m.res.mat <- as.matrix(m.rlm.res)
-m.res.var <- m.res.mat[2, ]
-names(m.res.var) <- c("COEFF", "SE", "STAT", "P", "Sig")
-mesc.univariate_list[["Recip.Mean"]] <- as.list(m.res.var)
 
 mesc.rlm.df <- do.call(rbind.data.frame, mesc.univariate_list)
+mesc.rlm.df$Predictor <- rownames(mesc.rlm.df)
+mesc.rlm.df$Padjust <- p.adjust(mesc.rlm.df$P)
+mesc.rlm.df$Sig <- as.numeric(mesc.rlm.df$Padjust <= 0.01)
 mesc.rlm.df$Predictor <- rownames(mesc.rlm.df)
 mesc.rlm.df$Direction <- "NoEffect"
 mesc.rlm.df$Direction[mesc.rlm.df$COEFF < 0 & mesc.rlm.df$Sig == 1] <- "Less"
@@ -164,16 +156,16 @@ write.table(mesc.rlm.df,
             sep="\t", quote=FALSE, row.names=FALSE)
 
 ### run the RLM with continuous variables
-cv2.fit <- rlm(Residual.CV2 ~  Recip.Mean + H3K27me3 + H3K4me3 + cpg_RATIO + CGI_SIZE.kb,
-               data=mesc.merge)
+cv2.fit <- lmrob(Residual.CV2 ~  H3K27me3 + H3K4me3 + CGI_SIZE.kb,
+               data=mesc.merge, control=model.control)
 cv2.robust <- summary(cv2.fit)
 cv2.rlm.res <- as.data.frame(cv2.robust$coefficients)
 n.params <- dim(cv2.rlm.res)[1]
-cv2.rlm.res$Pval <- 2*pt(-abs(cv2.rlm.res[, 3]), df=(dim(mesc.merge)[1]-1)-n.params)
-cv2.rlm.res$Sig <- as.numeric(cv2.rlm.res$Pval <= 0.01)
+cv2.rlm.res$Padjust <- p.adjust(cv2.rlm.res$`Pr(>|t|)`)
+cv2.rlm.res$Sig <- as.numeric(cv2.rlm.res$Padjust <= 0.01)
 cv2.rlm.res$Predictor <- rownames(cv2.rlm.res)
 cv2.rlm.res <- cv2.rlm.res[-1, ]
-colnames(cv2.rlm.res) <- c("COEFF", "SE", "STAT", "P", "Sig", "Predictor")
+colnames(cv2.rlm.res) <- c("COEFF", "SE", "STAT", "P", "Padjust", "Sig", "Predictor")
 
 cv2.rlm.res$Direction <- "NoEffect"
 cv2.rlm.res$Direction[cv2.rlm.res$COEFF < 0 & cv2.rlm.res$Sig == 1] <- "Less"
@@ -284,54 +276,41 @@ ggsave(chip.rcv,
 ## univariate robust linear regression ##
 #########################################
 # this is plotting for presentation/manuscript figures
-biv.vars <- c("cpg_RATIO", "CGI_SIZE.kb")
+biv.vars <- c("CGI_SIZE.kb")
 biv.univariate_list <- list()
 
 for(x in seq_along(biv.vars)){
-  .variable <- paste(c("Recip.Mean", biv.vars[x]), collapse=" + ")
+  .variable <- biv.vars[x]
   .glm.form <- as.formula(paste("Residual.CV2", .variable, sep=" ~ "))
   
-  m.rlm <- rlm(.glm.form, data=mesc.merge)
+  m.rlm <- lmrob(.glm.form, data=mesc.merge, control=model.control)
   m.robust <- summary(m.rlm)
   m.rlm.res <- as.data.frame(m.robust$coefficients)
-  m.rlm.res$Pval <- 2*pt(-abs(m.rlm.res[, 3]), df=3)
-  m.rlm.res$Sig <- as.numeric(m.rlm.res$Pval <= 0.05)
+  m.rlm.res$Sig <- as.numeric(m.rlm.res$`Pr(>|t|)` <= 0.05)
   m.res.mat <- as.matrix(m.rlm.res)
-  m.res.var <- m.res.mat[3:dim(m.res.mat)[1], ]
+  m.res.var <- m.res.mat[2:dim(m.res.mat)[1], ]
   names(m.res.var) <- c("COEFF", "SE", "STAT", "P", "Sig")
   biv.univariate_list[[biv.vars[x]]] <- as.list(m.res.var)
 }
 
-# add the mean expression on it's own
-.glm.form <- as.formula(paste("Residual.CV2", "Recip.Mean", sep=" ~ "))
-
-m.rlm <- rlm(.glm.form, data=mesc.merge)
-m.robust <- summary(m.rlm)
-m.rlm.res <- as.data.frame(m.robust$coefficients)
-m.rlm.res$Pval <- 2*pt(-abs(m.rlm.res[, 3]), df=3)
-m.rlm.res$Sig <- as.numeric(m.rlm.res$Pval <= 0.05)
-m.res.mat <- as.matrix(m.rlm.res)
-m.res.var <- m.res.mat[2, ]
-names(m.res.var) <- c("COEFF", "SE", "STAT", "P", "Sig")
-biv.univariate_list[["Recip.Mean"]] <- as.list(m.res.var)
-
 # add the promoter activity
-.variable <- paste(c("Recip.Mean", "PromoterActivity"), collapse=" + ")
+.variable <- "PromoterActivity"
 .glm.form <- as.formula(paste("Residual.CV2", .variable, sep=" ~ "))
 
-m.rlm <- rlm(.glm.form, data=mesc.merge)
+m.rlm <- lmrob(.glm.form, data=mesc.merge, control=model.control)
 m.robust <- summary(m.rlm)
 m.rlm.res <- as.data.frame(m.robust$coefficients)
-m.rlm.res$Pval <- 2*pt(-abs(m.rlm.res[, 3]), df=3)
-m.rlm.res$Sig <- as.numeric(m.rlm.res$Pval <= 0.05)
+m.rlm.res$Sig <- as.numeric(m.rlm.res$`Pr(>|t|)` <= 0.05)
 m.res.mat <- as.matrix(m.rlm.res)
-m.res.var <- m.res.mat[c(3:4), ]
+m.res.var <- m.res.mat[c(2:3), ]
 colnames(m.res.var) <- c("COEFF", "SE", "STAT", "P", "Sig")
 biv.univariate_list[["PromoterActivityBivalent"]] <- as.list(m.res.var[1, ])
 biv.univariate_list[["PromoterActivityH3K4me3"]] <- as.list(m.res.var[1, ])
 
 biv.rlm.df <- do.call(rbind.data.frame, biv.univariate_list)
 biv.rlm.df$Predictor <- rownames(biv.rlm.df)
+biv.rlm.df$Padjust <- p.adjust(biv.rlm.df$P)
+biv.rlm.df$Sig <- as.numeric(biv.rlm.df$Padjust <= 0.01)
 biv.rlm.df$Direction <- "NoEffect"
 biv.rlm.df$Direction[biv.rlm.df$COEFF < 0 & biv.rlm.df$Sig == 1] <- "Less"
 biv.rlm.df$Direction[biv.rlm.df$COEFF > 0 & biv.rlm.df$Sig == 1] <- "More"
@@ -352,16 +331,16 @@ write.table(biv.rlm.df,
 ## Multivariate fit ##
 ######################
 
-bivalent.fit <- rlm(Residual.CV2 ~  Recip.Mean + PromoterActivity + cpg_RATIO + CGI_SIZE.kb,
-               data=mesc.merge)
+bivalent.fit <- lmrob(Residual.CV2 ~  PromoterActivity + CGI_SIZE.kb,
+               data=mesc.merge, control=model.control)
 bivalent.robust <- summary(bivalent.fit)
 bivalent.rlm.res <- as.data.frame(bivalent.robust$coefficients)
 n.params <- dim(bivalent.rlm.res)[1]
-bivalent.rlm.res$Pval <- 2*pt(-abs(bivalent.rlm.res[, 3]), df=(dim(mesc.merge)[1]-1)-n.params)
-bivalent.rlm.res$Sig <- as.numeric(bivalent.rlm.res$Pval <= 0.01)
+bivalent.rlm.res$Padjust <- p.adjust(bivalent.rlm.res$`Pr(>|t|)`)
+bivalent.rlm.res$Sig <- as.numeric(bivalent.rlm.res$Padjust <= 0.01)
 bivalent.rlm.res$Predictor <- rownames(bivalent.rlm.res)
 bivalent.rlm.res <- bivalent.rlm.res[-1, ]
-colnames(bivalent.rlm.res) <- c("COEFF", "SE", "STAT", "P", "Sig", "Predictor")
+colnames(bivalent.rlm.res) <- c("COEFF", "SE", "STAT", "P", "Padjust", "Sig", "Predictor")
 
 bivalent.rlm.res$Direction <- "NoEffect"
 bivalent.rlm.res$Direction[bivalent.rlm.res$COEFF < 0 & bivalent.rlm.res$Sig == 1] <- "Less"

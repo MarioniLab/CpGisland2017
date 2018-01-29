@@ -3,14 +3,13 @@ source("~/Dropbox/R_sessions/Noise/human_genomic_noise_features.R")
 source("~/Dropbox/R_sessions/Noise/human_pancreas_genomic_noise_features.R")
 
 library(ggplot2)
-library(MASS)
+library(robustbase)
 source("~/Dropbox/R_sessions/GGMike/theme_mike.R")
 
 panc.vars <- colnames(genomic.features)
-panc.vars <- panc.vars[!grepl(panc.vars, pattern="(NMI)|(CGI_SIZE)|(cpg_)")]
+panc.vars <- panc.vars[!grepl(panc.vars, pattern="(NMI)|(CGI_SIZE)|(cpg_)|(Mean)")]
 
-panc.genomic.vars <- paste(c("Mean",
-                             panc.vars),
+panc.genomic.vars <- paste(panc.vars,
                            collapse=" + ")
 
 panc.match <- merge(panc.gene.summary, genomic.features,
@@ -21,29 +20,31 @@ panc.match <- merge(panc.gene.summary, genomic.features,
 #########################################
 # this is plotting for presentation/manuscript figures
 panc.univariate_list <- list()
+model.control <- lmrob.control(max.it=500, k.max=500, rel.tol=1e-7)
 
 panc.var.names <- unlist(strsplit(panc.genomic.vars, split=" + ", fixed=T))
 # remove redundant variables, i.e CpG island AND NMI
 # remove CpG island characteristics
-panc.var.names <- panc.var.names[!grepl(panc.var.names, pattern="(NMI)|(CGI_SIZE)|(cpg_)|(CGI)|(GENE)")]
+panc.var.names <- panc.var.names[!grepl(panc.var.names, 
+                                        pattern="(NMI)|(CGI_SIZE)|(cpg_)|(CGI)|(GENE)|(Mean)")]
 
 for(x in seq_along(panc.var.names)){
   .variable <- paste(panc.var.names[x], sep=" + ")
   .glm.form <- as.formula(paste("Residual.CV2", .variable, sep=" ~ "))
   
-  m.rlm <- rlm(.glm.form, data=panc.match)
+  m.rlm <- lmrob(.glm.form, data=panc.match, control=model.control)
   m.robust <- summary(m.rlm)
   m.rlm.res <- as.data.frame(m.robust$coefficients)
-  m.rlm.res$Pval <- 2*pt(-abs(m.rlm.res[, 3]), df=3)
-  m.rlm.res$Sig <- as.numeric(m.rlm.res$Pval <= 0.05)
   m.res.mat <- as.matrix(m.rlm.res)
   m.res.var <- m.res.mat[2, ]
-  names(m.res.var) <- c("COEFF", "SE", "STAT", "P", "Sig")
+  names(m.res.var) <- c("COEFF", "SE", "STAT", "P")
   panc.univariate_list[[panc.var.names[x]]] <- as.list(m.res.var)
 }
 
 panc.rlm.df <- do.call(rbind.data.frame, panc.univariate_list)
 panc.rlm.df$Predictor <- rownames(panc.rlm.df)
+panc.rlm.df$Padjust <- p.adjust(panc.rlm.df$P)
+panc.rlm.df$Sig <- as.numeric(panc.rlm.df$Padjust <= 0.01)
 panc.rlm.df$Direction <- "NoEffect"
 panc.rlm.df$Direction[panc.rlm.df$COEFF < 0 & panc.rlm.df$Sig == 1] <- "Less"
 panc.rlm.df$Direction[panc.rlm.df$COEFF > 0 & panc.rlm.df$Sig == 1] <- "More"
@@ -84,24 +85,22 @@ ggsave(univar.plot,
 ###########################################
 ## multivariate robust linear regression ##
 ###########################################
-panc.genomic.vars <- paste(c("Mean",
-                             panc.var.names),
+panc.genomic.vars <- paste(panc.var.names,
                            collapse=" + ")
 
 panc.glm.form <- as.formula(paste("Residual.CV2",
                                   panc.genomic.vars, sep=" ~ "))
 
-panc.rlm <- rlm(panc.glm.form, data=panc.match)
+panc.rlm <- lmrob(panc.glm.form, data=panc.match, control=model.control)
 panc.robust <- summary(panc.rlm)
 panc.rlm.res <- as.data.frame(panc.robust$coefficients)
-panc.rlm.res$Pval <- 2*pt(-abs(panc.rlm.res[, 3]), df=dim(panc.match)[2]-1)
-panc.rlm.res$Sig <- as.numeric(panc.rlm.res$Pval <= 0.05)
+panc.rlm.res$Padjust <- p.adjust(panc.rlm.res$`Pr(>|t|)`)
+panc.rlm.res$Sig <- as.numeric(panc.rlm.res$Padjust <= 0.01)
 panc.rlm.res$Predictor <- rownames(panc.rlm.res)
-colnames(panc.rlm.res) <- c("COEFF", "SE", "STAT", "P", "Sig", "Predictor")
+colnames(panc.rlm.res) <- c("COEFF", "SE", "STAT", "P", "Padjust", "Sig", "Predictor")
 panc.rlm.res$Direction <- "NoEffect"
 panc.rlm.res$Direction[panc.rlm.res$COEFF < 0 & panc.rlm.res$Sig == 1] <- "Less"
 panc.rlm.res$Direction[panc.rlm.res$COEFF > 0 & panc.rlm.res$Sig == 1] <- "More"
-
 
 # give the features more informative/better formated names
 panc.rlm.res$Predictor[panc.rlm.res$Predictor == "N_CpG"] <- "CpG island"

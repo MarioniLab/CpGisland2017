@@ -4,14 +4,13 @@ source("~/Dropbox/R_sessions/Noise/human_pancreas_genomic_noise_features.R")
 
 library(scales)
 library(ggplot2)
-library(MASS)
+library(robustbase)
 source("~/Dropbox/R_sessions/GGMike/theme_mike.R")
 
 human.genomic.features$CGI_SIZE.kb <- human.genomic.features$CGI_SIZE/1000
 
 panc.vars <- colnames(human.genomic.features)
-panc.vars <- panc.vars[grepl(panc.vars, pattern="(CGI_SIZE.kb)|(cpg_[GC|O|R])|(TOTLEN)
-                             |(SP1)")]
+panc.vars <- panc.vars[grepl(panc.vars, pattern="(CGI_SIZE.kb)|(TOTLEN)|(SP1)")]
 
 panc.match <- merge(panc.gene.summary, human.genomic.features,
                     by='GENE')
@@ -25,38 +24,40 @@ panc.match$Recip.Mean <- 1/panc.match$Mean
 #########################################
 # this is plotting for presentation/manuscript figures
 panc.univariate_list <- list()
+model.control <- lmrob.control(max.it=500, k.max=500, rel.tol=1e-7)
 
 for(x in seq_along(panc.vars)){
-  .variable <- paste(c("Recip.Mean", panc.vars[x]), collapse=" + ")
+  #.variable <- paste(c("Recip.Mean", panc.vars[x]), collapse=" + ")
+  .variable <- panc.vars[x]
   .glm.form <- as.formula(paste("Residual.CV2", .variable, sep=" ~ "))
   
-  m.rlm <- rlm(.glm.form, data=panc.match)
+  m.rlm <- lmrob(.glm.form, data=panc.match, control=model.control)
   m.robust <- summary(m.rlm)
   m.rlm.res <- as.data.frame(m.robust$coefficients)
-  m.rlm.res$Pval <- 2*pt(-abs(m.rlm.res[, 3]), df=3)
-  m.rlm.res$Sig <- as.numeric(m.rlm.res$Pval <= 0.05)
+  m.rlm.res$Sig <- as.numeric(m.rlm.res$`Pr(>|t|)` <= 0.05)
   m.res.mat <- as.matrix(m.rlm.res)
-  m.res.var <- m.res.mat[3, ]
+  m.res.var <- m.res.mat[2, ]
   names(m.res.var) <- c("COEFF", "SE", "STAT", "P", "Sig")
   panc.univariate_list[[panc.vars[x]]] <- as.list(m.res.var)
 }
 
-# add the mean expression on it's own
-.glm.form <- as.formula(paste("Residual.CV2", "Recip.Mean", sep=" ~ "))
-
-m.rlm <- rlm(.glm.form, data=panc.match)
-m.robust <- summary(m.rlm)
-m.rlm.res <- as.data.frame(m.robust$coefficients)
-m.rlm.res$Pval <- 2*pt(-abs(m.rlm.res[, 3]), df=3)
-m.rlm.res$Sig <- as.numeric(m.rlm.res$Pval <= 0.05)
-m.res.mat <- as.matrix(m.rlm.res)
-m.res.var <- m.res.mat[2, ]
-names(m.res.var) <- c("COEFF", "SE", "STAT", "P", "Sig")
-panc.univariate_list[["Recip.Mean"]] <- as.list(m.res.var)
-
+# # add the mean expression on it's own
+# .glm.form <- as.formula(paste("Residual.CV2", "Recip.Mean", sep=" ~ "))
+# 
+# m.rlm <- rlm(.glm.form, data=panc.match)
+# m.robust <- summary(m.rlm)
+# m.rlm.res <- as.data.frame(m.robust$coefficients)
+# m.rlm.res$Pval <- 2*pt(-abs(m.rlm.res[, 3]), df=3)
+# m.rlm.res$Sig <- as.numeric(m.rlm.res$Pval <= 0.05)
+# m.res.mat <- as.matrix(m.rlm.res)
+# m.res.var <- m.res.mat[2, ]
+# names(m.res.var) <- c("COEFF", "SE", "STAT", "P", "Sig")
+# panc.univariate_list[["Recip.Mean"]] <- as.list(m.res.var)
 
 panc.rlm.df <- do.call(rbind.data.frame, panc.univariate_list)
 panc.rlm.df$Predictor <- rownames(panc.rlm.df)
+panc.rlm.df$Padjust <- p.adjust(panc.rlm.df$P)
+panc.rlm.df$Sig <- as.numeric(panc.rlm.df$Padjust <= 0.01)
 panc.rlm.df$Direction <- "NoEffect"
 panc.rlm.df$Direction[panc.rlm.df$COEFF < 0 & panc.rlm.df$Sig == 1] <- "Less"
 panc.rlm.df$Direction[panc.rlm.df$COEFF > 0 & panc.rlm.df$Sig == 1] <- "More"
@@ -100,20 +101,20 @@ ggsave(cpg.plot,
 ###########################################
 ## multivariate robust linear regression ##
 ###########################################
-panc.genomic.vars <- paste(c("Recip.Mean",
-                             panc.vars),
+panc.genomic.vars <- paste(panc.vars,
                            collapse=" + ")
 
 panc.glm.form <- as.formula(paste("Residual.CV2",
                                   panc.genomic.vars, sep=" ~ "))
 
-panc.rlm <- rlm(panc.glm.form, data=panc.match)
+panc.rlm <- lmrob(panc.glm.form, data=panc.match, control=model.control)
 panc.robust <- summary(panc.rlm)
 panc.rlm.res <- as.data.frame(panc.robust$coefficients)
-panc.rlm.res$Pval <- 2*pt(-abs(panc.rlm.res[, 3]), df=dim(panc.match)[2]-1)
-panc.rlm.res$Sig <- as.numeric(panc.rlm.res$Pval <= 0.05)
+panc.rlm.res$Padjust <- p.adjust(panc.rlm.res$`Pr(>|t|)`)
+panc.rlm.res$Sig <- as.numeric(panc.rlm.res$Padjust <= 0.01)
 panc.rlm.res$Predictor <- rownames(panc.rlm.res)
-colnames(panc.rlm.res) <- c("COEFF", "SE", "STAT", "P", "Sig", "Predictor")
+colnames(panc.rlm.res) <- c("COEFF", "SE", "STAT", "P", "Padjust", "Sig", "Predictor")
+
 panc.rlm.res$Direction <- "NoEffect"
 panc.rlm.res$Direction[panc.rlm.res$COEFF < 0 & panc.rlm.res$Sig == 1] <- "Less"
 panc.rlm.res$Direction[panc.rlm.res$COEFF > 0 & panc.rlm.res$Sig == 1] <- "More"

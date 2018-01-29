@@ -3,13 +3,13 @@ source("~/Dropbox/R_sessions/Noise/genomic_noise_features.R")
 source("~/Dropbox/R_sessions/Noise/tcell_genomic_noise_features.R")
 library(MASS)
 library(ggplot2)
+library(robustbase)
 source("~/Dropbox/R_sessions/GGMike/theme_mike.R")
 
 tcell.vars <- colnames(genomic.features)[2:16]
-tcell.vars <- tcell.vars[!grepl(tcell.vars, pattern="(NMI)|(CGI_SIZE)|(cpg_)|(PHAST)")]
+tcell.vars <- tcell.vars[!grepl(tcell.vars, pattern="(NMI)|(CGI_SIZE)|(cpg_)|(PHAST)|(Mean)")]
 
-tcell.genomic.vars <- paste(c("Mean",
-                             tcell.vars),
+tcell.genomic.vars <- paste(tcell.vars,
                            collapse=" + ")
 
 tcell.match <- merge(tcell.gene.summary, genomic.features,
@@ -19,6 +19,7 @@ tcell.match <- merge(tcell.gene.summary, genomic.features,
 #########################################
 # this is plotting for presentation/manuscript figures
 tcell.univariate_list <- list()
+model.control <- lmrob.control(max.it=500, k.max=500, rel.tol=1e-7)
 
 tcell.var.names <- unlist(strsplit(tcell.genomic.vars, split=" + ", fixed=T))
 # remove redundant variables, i.e CpG island AND NMI
@@ -29,11 +30,10 @@ for(x in seq_along(tcell.var.names)){
   .variable <- paste(tcell.var.names[x], sep=" + ")
   .glm.form <- as.formula(paste("Residual.CV2", .variable, sep=" ~ "))
   
-  m.rlm <- rlm(.glm.form, data=tcell.match)
+  m.rlm <- lmrob(.glm.form, data=tcell.match, control=model.control)
   m.robust <- summary(m.rlm)
   m.rlm.res <- as.data.frame(m.robust$coefficients)
-  m.rlm.res$Pval <- 2*pt(-abs(m.rlm.res[, 3]), df=3)
-  m.rlm.res$Sig <- as.numeric(m.rlm.res$Pval <= 0.05)
+  m.rlm.res$Sig <- as.numeric(m.rlm.res$`Pr(>|t|)` <= 0.05)
   m.res.mat <- as.matrix(m.rlm.res)
   m.res.var <- m.res.mat[2, ]
   names(m.res.var) <- c("COEFF", "SE", "STAT", "P", "Sig")
@@ -42,6 +42,8 @@ for(x in seq_along(tcell.var.names)){
 
 tcell.rlm.df <- do.call(rbind.data.frame, tcell.univariate_list)
 tcell.rlm.df$Predictor <- rownames(tcell.rlm.df)
+tcell.rlm.df$Padjust <- p.adjust(tcell.rlm.df$P)
+tcell.rlm.df$Sig <- as.numeric(tcell.rlm.df$Padjust <= 0.01)
 tcell.rlm.df$Direction <- "NoEffect"
 tcell.rlm.df$Direction[tcell.rlm.df$COEFF < 0 & tcell.rlm.df$Sig == 1] <- "Less"
 tcell.rlm.df$Direction[tcell.rlm.df$COEFF > 0 & tcell.rlm.df$Sig == 1] <- "More"
@@ -64,11 +66,14 @@ tcell.rlm.df$Predictor[tcell.rlm.df$Predictor == "EXON_VARLENGTH"] <- "Exon leng
 tcell.rlm.df$Tissue <- "Tcell"
 tcell.rlm.df$Species <- "Mouse"
 
+effect.cols <- c("#62148f", "#878787", "#feaf10")
+names(effect.cols) <- c("Less", "NoEffect", "More")
+
 univar.plot <- ggplot(tcell.rlm.df,
                       aes(x=reorder(Predictor, -STAT),
                           y=STAT, fill=Direction)) +
   geom_point(alpha=0.55, shape=21, size=5) + theme_mike() +
-  scale_fill_manual(values=c("#62148f", "#feaf10", "#878787")) +
+  scale_fill_manual(values=effect.cols) +
   theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1)) +
   labs(x="Annotation", y="t-statistic") +
   guides(fill=FALSE) +
@@ -87,13 +92,13 @@ ggsave(univar.plot,
 tcell.glm.form <- as.formula(paste("Residual.CV2",
                                   tcell.genomic.vars, sep=" ~ "))
 
-tcell.rlm <- rlm(tcell.glm.form, data=tcell.match)
+tcell.rlm <- lmrob(tcell.glm.form, data=tcell.match, control=model.control)
 tcell.robust <- summary(tcell.rlm)
 tcell.rlm.res <- as.data.frame(tcell.robust$coefficients)
-tcell.rlm.res$Pval <- 2*pt(-abs(tcell.rlm.res[, 3]), df=dim(tcell.match)[2]-1)
-tcell.rlm.res$Sig <- as.numeric(tcell.rlm.res$Pval <= 0.05)
+tcell.rlm.res$Padjust <- p.adjust(tcell.rlm.res$`Pr(>|t|)`)
+tcell.rlm.res$Sig <- as.numeric(tcell.rlm.res$Padjust <= 0.05)
 tcell.rlm.res$Predictor <- rownames(tcell.rlm.res)
-colnames(tcell.rlm.res) <- c("COEFF", "SE", "STAT", "P", "Sig", "Predictor")
+colnames(tcell.rlm.res) <- c("COEFF", "SE", "STAT", "P", "Padjust", "Sig", "Predictor")
 tcell.rlm.res$Direction <- "NoEffect"
 tcell.rlm.res$Direction[tcell.rlm.res$COEFF < 0 & tcell.rlm.res$Sig == 1] <- "Less"
 tcell.rlm.res$Direction[tcell.rlm.res$COEFF > 0 & tcell.rlm.res$Sig == 1] <- "More"
@@ -128,12 +133,12 @@ multivar.plot <- ggplot(tcell.rlm.res,
                         aes(x=reorder(Predictor, -STAT),
                             y=STAT, fill=Direction)) +
   geom_point(alpha=0.55, shape=21, size=5) + theme_mike() +
-  scale_fill_manual(values=c("#62148f", "#feaf10", "#878787")) +
+  scale_fill_manual(values=effect.cols) +
   theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1)) +
   labs(x="Annotation", y="t-statistic") +
   guides(fill=FALSE) +
   geom_hline(mapping=aes(yintercept=0), linetype="dashed", colour="grey") +
-  scale_y_continuous(limits=c(-50, 50))
+  scale_y_continuous(limits=c(-25, 25))
 
 ggsave(multivar.plot,
        filename="~/Dropbox/Noise_genomics/Figures/ms_figures/Tcell_multiivariateLM.png",
@@ -154,13 +159,13 @@ all.plot <- ggplot(tcell.rlm.all,
               position=position_jitterdodge(jitter.height=0,
                                             jitter.width=0.1)) +
   theme_mike() +
-  scale_fill_manual(values=c("#62148f", "#feaf10", "#878787")) +
+  scale_fill_manual(values=effect.cols) +
   scale_shape_manual(values=c(21, 23)) +
   theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1),
         axis.text=element_text(size=16)) +
   labs(x="Annotation", y="t-statistic") +
   guides(fill=FALSE, shape=FALSE) +
-  scale_y_continuous(limits=c(-50, 50))
+  scale_y_continuous(limits=c(-25, 25))
 
 ggsave(all.plot,
        filename="~/Dropbox/Noise_genomics/Figures/ms_figures/Tcell_allLM.png",

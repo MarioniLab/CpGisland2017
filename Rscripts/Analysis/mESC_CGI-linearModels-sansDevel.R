@@ -13,14 +13,13 @@ source("~/Dropbox/R_sessions/GGMike/theme_mike.R")
 genomic.features$CGI_SIZE.kb <- genomic.features$CGI_SIZE/1000
 
 mesc.vars <- colnames(genomic.features)
-mesc.vars <- mesc.vars[grepl(mesc.vars, pattern="(CGI_SIZE.kb)|(cpg_[GC|O|R])|(TOTLEN)
-                             |(SP1)")]
+mesc.vars <- mesc.vars[grepl(mesc.vars, pattern="(CGI_SIZE.kb)|(SP1)")]
 
 mesc.match <- merge(mesc.gene.summary, genomic.features,
                     by='GENE')
 mesc.match$Recip.Mean <- 1/mesc.match$Mean
 
-# select only those genes with a CpG island
+# select only those genes that are not in the gene list of developmental genes
 mesc.match <- mesc.match[!mesc.match$GENE %in% devel_genes$ensembl_gene_id, ]
 
 #########################################
@@ -30,7 +29,7 @@ mesc.match <- mesc.match[!mesc.match$GENE %in% devel_genes$ensembl_gene_id, ]
 mesc.univariate_list <- list()
 
 for(x in seq_along(mesc.vars)){
-  .variable <- paste(c("Recip.Mean", mesc.vars[x]), collapse=" + ")
+  .variable <- paste(mesc.vars[x], collapse=" + ")
   .glm.form <- as.formula(paste("Residual.CV2", .variable, sep=" ~ "))
   
   m.rlm <- rlm(.glm.form, data=mesc.match)
@@ -39,7 +38,7 @@ for(x in seq_along(mesc.vars)){
   m.rlm.res$Pval <- 2*pt(-abs(m.rlm.res[, 3]), df=3)
   m.rlm.res$Sig <- as.numeric(m.rlm.res$Pval <= 0.05)
   m.res.mat <- as.matrix(m.rlm.res)
-  m.res.var <- m.res.mat[3, ]
+  m.res.var <- m.res.mat[2, ]
   names(m.res.var) <- c("COEFF", "SE", "STAT", "P", "Sig")
   mesc.univariate_list[[mesc.vars[x]]] <- as.list(m.res.var)
 }
@@ -103,8 +102,7 @@ ggsave(cpg.plot,
 ###########################################
 ## multivariate robust linear regression ##
 ###########################################
-mesc.genomic.vars <- paste(c("Recip.Mean",
-                             mesc.vars),
+mesc.genomic.vars <- paste(mesc.vars,
                            collapse=" + ")
 
 mesc.glm.form <- as.formula(paste("Residual.CV2",

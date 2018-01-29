@@ -29,106 +29,18 @@ mesc.gene.summary$CV2 <- mesc.gene.summary$Var/(mesc.gene.summary$Mean ** 2)
 mesc.gene.summary$GENE <- rownames(mesc.gene.summary)
 mesc.gene.summary <- mesc.gene.summary[(!mesc.gene.summary$CountMean < 0), ]
 
-# estimate the over dispersion paramer, alpha, using support vector regression and local regression
-set.seed(42)
-mesc.svm <- svm(CountVar ~ CountMean, mesc.gene.summary)
-mesc.gene.summary$Alpha.svr <- residuals(mesc.svm)
-
-mesc.loess <- loess(CountVar ~ CountMean, data=mesc.gene.summary, span=0.25)
-mesc.gene.summary$Alpha.loess <- residuals(mesc.loess)
-
-#########################################################
-# plot mean-variance dependence for loess and SVR fits ##
-#########################################################
-png("~/Dropbox/Noise_genomics/Figures/ms_figures/Supplementary_mESC_dispersion-loess.png",
-    width=3.75, height=3.75, res=300, units="in")
-par(mar=c(4.6, 4.6, 2.1, 1.1))
-smoothScatter(y=mesc.gene.summary$CountVar,
-              x=mesc.gene.summary$CountMean,
-              ylab=expression(paste("mESC Expression ", log[2], " Variance")),
-              xlab=expression(paste("mESC Expression ", log[2], " Mean")))
-lines(loess.smooth(x=mesc.gene.summary$CountMean, y=mesc.loess$fitted), col='red', lwd=2)
-dev.off()
-
-
-png("~/Dropbox/Noise_genomics/Figures/ms_figures/Supplementary_mESC_dispersion-svr.png",
-    width=3.75, height=3.75, res=300, units="in")
-par(mar=c(4.6, 4.6, 2.1, 1.1))
-smoothScatter(y=mesc.gene.summary$CountVar,
-              x=mesc.gene.summary$CountMean,
-              xlab=expression(paste("mESC Expression ", log[2], " Variance")),
-              ylab=expression(paste("mESC Expression ", log[2], " Mean")))
-lines(loess.smooth(x=mesc.gene.summary$CountMean, y=fitted(mesc.svm)), col='purple', lwd=3)
-dev.off()
-
-###################################################
-# plot the loess and SVR residuals for comparison #
-###################################################
-
-# also plot the Pearson correlation between them
-alpha.cor <- cor(mesc.gene.summary$Alpha.loess,
-                 mesc.gene.summary$Alpha.svr,
-                 method="pearson")
-
-png("~/Dropbox/Noise_genomics/Figures/ms_figures/Supplementary_mESC_dispersion_loessVsSVR.png",
-    height=3.75, width=3.75, res=300, units="in")
-par(mar=c(4.6, 4.6, 2.1, 1.1))
-smoothScatter(x=mesc.gene.summary$Alpha.loess,
-              y=mesc.gene.summary$Alpha.svr,
-              xlab=expression(paste("Loess ", alpha, " Overdispersion")),
-              ylab=expression(paste("SVR ", alpha, " Overdispersion")),
-              cex=1.4)
-text(x=1, y=3, labels=paste("Pearson\nr =", round(alpha.cor, 2)),
-    font=3)
-dev.off()
-
-################################################################
-# plot the loess and SVR residuals against the mean expression #
-################################################################
-res.loess <- loess(Alpha.loess ~ Mean, data=mesc.gene.summary, span=0.25)
-mesc.gene.summary$Alpha_r.loess <- residuals(res.loess)
-
-res.loess <- loess(Alpha.svr ~ Mean, data=mesc.gene.summary, span=0.25)
-mesc.gene.summary$Alpha_r.svr <- residuals(res.loess)
-
-# also add a loess fit to show the lack of relationship
-png("~/Dropbox/Noise_genomics/Figures/ms_figures/Supplementary_mESC_dispersion-meanVsalpha.png",
-    height=2.5, width=7.75, res=300, units="in")
-par(mfrow=c(1, 2), mar=c(4.6, 4.6, 2.1, 1.1))
-
-smoothScatter(x=mesc.gene.summary$Mean,
-       y=mesc.gene.summary$Alpha.loess,
-       ylab=expression(paste("Loess ", alpha, " Overdispersion")),
-       xlab=expression(paste("log"[2], " Mean Expression")),
-       cex=1, pch='.')
-lines(loess.smooth(x=mesc.gene.summary$Mean,
-                   y=mesc.gene.summary$Alpha_r.loess), col='red', lwd=2)
-
-smoothScatter(x=mesc.gene.summary$Mean,
-     y=mesc.gene.summary$Alpha.svr,
-     ylab=expression(paste("SVR ", alpha, " Overdispersion")),
-     xlab=expression(paste("log"[2], " Mean Expression")),
-     cex=1, pch='.')
-lines(loess.smooth(x=mesc.gene.summary$Mean,
-                   y=mesc.gene.summary$Alpha_r.svr), col='purple', lwd=2)
-
-dev.off()
-
-###########################################################
-# plot the loess overdispersion against the residual CV^2 #
-###########################################################
+##########################
+# plot the residual CV^2 #
+##########################
 # calculate the residual CV^2
-# find the minimum mean prior to fitting
-minMeanForFit <- unname(quantile(mesc.gene.summary$Mean[which(mesc.gene.summary$CV2 > 0.2)], 0.8))
-
 # select genes with mean value greater than min value for fitting
-useForFit <- 1/mesc.gene.summary$Mean <= 0.05
+useForFit <- mesc.gene.summary$Mean <= 0.1
 
 # fit with a gamma-distributed GLM
 fit <- glmgam.fit(cbind(a0 = 1, a1tilde=1/mesc.gene.summary$Mean[!useForFit]), 
                   mesc.gene.summary$CV2[!useForFit])
 
-mesc.gene.summary$Residual.CV2[!useForFit] <- fitted.values(fit) - mesc.gene.summary$CV2[!useForFit]
+mesc.gene.summary$Residual.CV2[!useForFit] <- abs(mesc.gene.summary$CV2[!useForFit] - fitted.values(fit))
 
 png("~/Dropbox/Noise_genomics/Figures/ms_figures/Supplementary_mESC_dispersion-CV2Vsalpha.png",
      height=7.25, width=5.75, res=300, units="in")

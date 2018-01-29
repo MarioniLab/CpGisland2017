@@ -3,14 +3,13 @@ source("~/Dropbox/R_sessions/Noise/human_genomic_noise_features.R")
 source("~/Dropbox/R_sessions/Noise/hESC_genomic_noise_features.R")
 
 library(ggplot2)
-library(MASS)
+library(robustbase)
 source("~/Dropbox/R_sessions/GGMike/theme_mike.R")
 
 human.genomic.features$CGI_SIZE.kb <- human.genomic.features$CGI_SIZE/1000
 
 hesc.vars <- colnames(human.genomic.features)
-hesc.vars <- hesc.vars[grepl(hesc.vars, pattern="(CGI_SIZE.kb)|(cpg_[GC|O|R])|(TOTLEN)
-                             |(SP1)")]
+hesc.vars <- hesc.vars[grepl(hesc.vars, pattern="(CGI_SIZE.kb)|(TOTLEN)|(SP1)")]
 
 hesc.match <- merge(hesc.gene.summary, human.genomic.features,
                     by='GENE')
@@ -24,38 +23,40 @@ hesc.match$Recip.Mean <- 1/hesc.match$Mean
 #########################################
 # this is plotting for presentation/manuscript figures
 hesc.univariate_list <- list()
+model.control <- lmrob.control(max.it=500, k.max=500, rel.tol=1e-7)
 
 for(x in seq_along(hesc.vars)){
-  .variable <- paste(c("Recip.Mean", hesc.vars[x]), collapse=" + ")
+  #.variable <- paste(c("Recip.Mean", hesc.vars[x]), collapse=" + ")
+  .variable <- hesc.vars[x]
   .glm.form <- as.formula(paste("Residual.CV2", .variable, sep=" ~ "))
   
-  m.rlm <- rlm(.glm.form, data=hesc.match)
+  m.rlm <- lmrob(.glm.form, data=hesc.match, control=model.control)
   m.robust <- summary(m.rlm)
   m.rlm.res <- as.data.frame(m.robust$coefficients)
-  m.rlm.res$Pval <- 2*pt(-abs(m.rlm.res[, 3]), df=3)
-  m.rlm.res$Sig <- as.numeric(m.rlm.res$Pval <= 0.05)
+  m.rlm.res$Sig <- as.numeric(m.rlm.res$`Pr(>|t|)` <= 0.05)
   m.res.mat <- as.matrix(m.rlm.res)
-  m.res.var <- m.res.mat[3, ]
+  m.res.var <- m.res.mat[2, ]
   names(m.res.var) <- c("COEFF", "SE", "STAT", "P", "Sig")
   hesc.univariate_list[[hesc.vars[x]]] <- as.list(m.res.var)
 }
 
-# add the mean expression on it's own
-.glm.form <- as.formula(paste("Residual.CV2", "Recip.Mean", sep=" ~ "))
-
-m.rlm <- rlm(.glm.form, data=hesc.match)
-m.robust <- summary(m.rlm)
-m.rlm.res <- as.data.frame(m.robust$coefficients)
-m.rlm.res$Pval <- 2*pt(-abs(m.rlm.res[, 3]), df=3)
-m.rlm.res$Sig <- as.numeric(m.rlm.res$Pval <= 0.05)
-m.res.mat <- as.matrix(m.rlm.res)
-m.res.var <- m.res.mat[2, ]
-names(m.res.var) <- c("COEFF", "SE", "STAT", "P", "Sig")
-hesc.univariate_list[["Recip.Mean"]] <- as.list(m.res.var)
-
+# # add the mean expression on it's own
+# .glm.form <- as.formula(paste("Residual.CV2", "Recip.Mean", sep=" ~ "))
+# 
+# m.rlm <- rlm(.glm.form, data=hesc.match)
+# m.robust <- summary(m.rlm)
+# m.rlm.res <- as.data.frame(m.robust$coefficients)
+# m.rlm.res$Pval <- 2*pt(-abs(m.rlm.res[, 3]), df=3)
+# m.rlm.res$Sig <- as.numeric(m.rlm.res$Pval <= 0.05)
+# m.res.mat <- as.matrix(m.rlm.res)
+# m.res.var <- m.res.mat[2, ]
+# names(m.res.var) <- c("COEFF", "SE", "STAT", "P", "Sig")
+# hesc.univariate_list[["Recip.Mean"]] <- as.list(m.res.var)
 
 hesc.rlm.df <- do.call(rbind.data.frame, hesc.univariate_list)
 hesc.rlm.df$Predictor <- rownames(hesc.rlm.df)
+hesc.rlm.df$Padjust <- p.adjust(hesc.rlm.df$P)
+hesc.rlm.df$Sig <- as.numeric(hesc.rlm.df$Padjust <= 0.01)
 hesc.rlm.df$Direction <- "NoEffect"
 hesc.rlm.df$Direction[hesc.rlm.df$COEFF < 0 & hesc.rlm.df$Sig == 1] <- "Less"
 hesc.rlm.df$Direction[hesc.rlm.df$COEFF > 0 & hesc.rlm.df$Sig == 1] <- "More"
@@ -99,20 +100,19 @@ ggsave(cpg.plot,
 ###########################################
 ## multivariate robust linear regression ##
 ###########################################
-hesc.genomic.vars <- paste(c("Recip.Mean",
-                             hesc.vars),
+hesc.genomic.vars <- paste(hesc.vars,
                            collapse=" + ")
 
 hesc.glm.form <- as.formula(paste("Residual.CV2",
                                   hesc.genomic.vars, sep=" ~ "))
 
-hesc.rlm <- rlm(hesc.glm.form, data=hesc.match)
+hesc.rlm <- lmrob(hesc.glm.form, data=hesc.match, control=model.control)
 hesc.robust <- summary(hesc.rlm)
 hesc.rlm.res <- as.data.frame(hesc.robust$coefficients)
-hesc.rlm.res$Pval <- 2*pt(-abs(hesc.rlm.res[, 3]), df=dim(hesc.match)[2]-1)
-hesc.rlm.res$Sig <- as.numeric(hesc.rlm.res$Pval <= 0.05)
+hesc.rlm.res$Padjust <- p.adjust(hesc.rlm.res$`Pr(>|t|)`)
+hesc.rlm.res$Sig <- as.numeric(hesc.rlm.res$Padjust <= 0.01)
 hesc.rlm.res$Predictor <- rownames(hesc.rlm.res)
-colnames(hesc.rlm.res) <- c("COEFF", "SE", "STAT", "P", "Sig", "Predictor")
+colnames(hesc.rlm.res) <- c("COEFF", "SE", "STAT", "P", "Padjust", "Sig", "Predictor")
 hesc.rlm.res$Direction <- "NoEffect"
 hesc.rlm.res$Direction[hesc.rlm.res$COEFF < 0 & hesc.rlm.res$Sig == 1] <- "Less"
 hesc.rlm.res$Direction[hesc.rlm.res$COEFF > 0 & hesc.rlm.res$Sig == 1] <- "More"

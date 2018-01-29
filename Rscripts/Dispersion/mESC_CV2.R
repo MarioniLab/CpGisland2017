@@ -36,13 +36,13 @@ mesc.gene.summary <- mesc.gene.summary[(!mesc.gene.summary$CountMean < 0), ]
 minMeanForFit <- unname(quantile(mesc.gene.summary$Mean[which(mesc.gene.summary$CV2 > 0.2)], 0.8))
 
 # select genes with mean value greater than min value for fitting
-useForFit <- 1/mesc.gene.summary$Mean <= 0.05
+useForFit <- mesc.gene.summary$Mean <= 0.1
 
 # fit with a gamma-distributed GLM
 mesc.fit <- glmgam.fit(cbind(a0 = 1, a1tilde=1/mesc.gene.summary$Mean[!useForFit]), 
                         mesc.gene.summary$CV2[!useForFit])
 
-mesc.gene.summary$Residual.CV2[!useForFit] <- fitted.values(mesc.fit) - mesc.gene.summary$CV2[!useForFit]
+mesc.gene.summary$Residual.CV2[!useForFit] <- abs(mesc.gene.summary$CV2[!useForFit] - fitted.values(mesc.fit))
 mesc.gene.summary$Recip.means[!useForFit] <- 1/mesc.gene.summary$Mean[!useForFit]
 
 ################################

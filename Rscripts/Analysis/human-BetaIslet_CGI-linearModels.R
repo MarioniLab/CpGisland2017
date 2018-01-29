@@ -4,14 +4,13 @@ source("~/Dropbox/R_sessions/Noise/human_genomic_noise_features.R")
 source("~/Dropbox/R_sessions/Noise/human_beta_islet_genomic_noise_features.R")
 library(scales)
 library(ggplot2)
-library(MASS)
+library(robustbase)
 source("~/Dropbox/R_sessions/GGMike/theme_mike.R")
 
 human.genomic.features$CGI_SIZE.kb <- human.genomic.features$CGI_SIZE/1000
 
 beta.vars <- colnames(human.genomic.features)
-beta.vars <- beta.vars[grepl(beta.vars, pattern="(CGI_SIZE.kb)|(cpg_[GC|O|R])|(TOTLEN)
-                             |(SP1)")]
+beta.vars <- beta.vars[grepl(beta.vars, pattern="(CGI_SIZE.kb)|(TOTLEN)|(SP1)")]
 
 beta.match <- merge(beta.gene.summary, human.genomic.features,
                     by='GENE')
@@ -25,38 +24,41 @@ beta.match$Recip.Mean <- 1/beta.match$Mean
 #########################################
 # this is plotting for presentation/manuscript figures
 beta.univariate_list <- list()
+model.control <- lmrob.control(max.it=500, k.max=500, rel.tol=1e-7)
 
 for(x in seq_along(beta.vars)){
-  .variable <- paste(c("Recip.Mean", beta.vars[x]), collapse=" + ")
+  #.variable <- paste(c("Recip.Mean", beta.vars[x]), collapse=" + ")
+  .variable <- beta.vars[x]
   .glm.form <- as.formula(paste("Residual.CV2", .variable, sep=" ~ "))
   
-  m.rlm <- rlm(.glm.form, data=beta.match)
+  m.rlm <- lmrob(.glm.form, data=beta.match, control=model.control)
   m.robust <- summary(m.rlm)
   m.rlm.res <- as.data.frame(m.robust$coefficients)
-  m.rlm.res$Pval <- 2*pt(-abs(m.rlm.res[, 3]), df=3)
-  m.rlm.res$Sig <- as.numeric(m.rlm.res$Pval <= 0.05)
+  #m.rlm.res$Pval <- 2*pt(-abs(m.rlm.res[, 3]), df=3)
+  m.rlm.res$Sig <- as.numeric(m.rlm.res$`Pr(>|t|)` <= 0.05)
   m.res.mat <- as.matrix(m.rlm.res)
-  m.res.var <- m.res.mat[3, ]
+  m.res.var <- m.res.mat[2, ]
   names(m.res.var) <- c("COEFF", "SE", "STAT", "P", "Sig")
   beta.univariate_list[[beta.vars[x]]] <- as.list(m.res.var)
 }
 
-# add the mean expression on it's own
-.glm.form <- as.formula(paste("Residual.CV2", "Recip.Mean", sep=" ~ "))
-
-m.rlm <- rlm(.glm.form, data=beta.match)
-m.robust <- summary(m.rlm)
-m.rlm.res <- as.data.frame(m.robust$coefficients)
-m.rlm.res$Pval <- 2*pt(-abs(m.rlm.res[, 3]), df=3)
-m.rlm.res$Sig <- as.numeric(m.rlm.res$Pval <= 0.05)
-m.res.mat <- as.matrix(m.rlm.res)
-m.res.var <- m.res.mat[2, ]
-names(m.res.var) <- c("COEFF", "SE", "STAT", "P", "Sig")
-beta.univariate_list[["Recip.Mean"]] <- as.list(m.res.var)
-
+# # add the mean expression on it's own
+# .glm.form <- as.formula(paste("Residual.CV2", "Recip.Mean", sep=" ~ "))
+# 
+# m.rlm <- rlm(.glm.form, data=beta.match)
+# m.robust <- summary(m.rlm)
+# m.rlm.res <- as.data.frame(m.robust$coefficients)
+# m.rlm.res$Pval <- 2*pt(-abs(m.rlm.res[, 3]), df=3)
+# m.rlm.res$Sig <- as.numeric(m.rlm.res$Pval <= 0.05)
+# m.res.mat <- as.matrix(m.rlm.res)
+# m.res.var <- m.res.mat[2, ]
+# names(m.res.var) <- c("COEFF", "SE", "STAT", "P", "Sig")
+# beta.univariate_list[["Recip.Mean"]] <- as.list(m.res.var)
 
 beta.rlm.df <- do.call(rbind.data.frame, beta.univariate_list)
 beta.rlm.df$Predictor <- rownames(beta.rlm.df)
+beta.rlm.df$Padjust <- p.adjust(beta.rlm.df$P)
+beta.rlm.df$Sig <- as.numeric(beta.rlm.df$Padjust <= 0.01)
 beta.rlm.df$Direction <- "NoEffect"
 beta.rlm.df$Direction[beta.rlm.df$COEFF < 0 & beta.rlm.df$Sig == 1] <- "Less"
 beta.rlm.df$Direction[beta.rlm.df$COEFF > 0 & beta.rlm.df$Sig == 1] <- "More"
@@ -90,7 +92,7 @@ cpg.plot <- ggplot(beta.rlm.df,
   theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1)) +
   labs(x="Annotation", y="t-statistic") +
   guides(fill=FALSE) +
-  scale_y_continuous(limits=c(-50, 50), oob=squish) +
+  scale_y_continuous(limits=c(-10, 10), oob=squish) +
   geom_hline(mapping=aes(yintercept=0), linetype="dashed", colour="grey") 
 
 ggsave(cpg.plot,
@@ -100,20 +102,19 @@ ggsave(cpg.plot,
 ###########################################
 ## multivariate robust linear regression ##
 ###########################################
-beta.genomic.vars <- paste(c("Recip.Mean",
-                             beta.vars),
+beta.genomic.vars <- paste(beta.vars,
                            collapse=" + ")
 
 beta.glm.form <- as.formula(paste("Residual.CV2",
                                   beta.genomic.vars, sep=" ~ "))
 
-beta.rlm <- rlm(beta.glm.form, data=beta.match)
+beta.rlm <- lmrob(beta.glm.form, data=beta.match, control=model.control)
 beta.robust <- summary(beta.rlm)
 beta.rlm.res <- as.data.frame(beta.robust$coefficients)
-beta.rlm.res$Pval <- 2*pt(-abs(beta.rlm.res[, 3]), df=dim(beta.match)[2]-1)
-beta.rlm.res$Sig <- as.numeric(beta.rlm.res$Pval <= 0.05)
+beta.rlm.res$Padjust <- p.adjust(beta.rlm.res$`Pr(>|t|)`)
+beta.rlm.res$Sig <- as.numeric(beta.rlm.res$Padjust <= 0.01)
 beta.rlm.res$Predictor <- rownames(beta.rlm.res)
-colnames(beta.rlm.res) <- c("COEFF", "SE", "STAT", "P", "Sig", "Predictor")
+colnames(beta.rlm.res) <- c("COEFF", "SE", "STAT", "P", "Padjust", "Sig", "Predictor")
 beta.rlm.res$Direction <- "NoEffect"
 beta.rlm.res$Direction[beta.rlm.res$COEFF < 0 & beta.rlm.res$Sig == 1] <- "Less"
 beta.rlm.res$Direction[beta.rlm.res$COEFF > 0 & beta.rlm.res$Sig == 1] <- "More"

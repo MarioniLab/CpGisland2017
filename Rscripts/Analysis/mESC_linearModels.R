@@ -3,22 +3,27 @@ source("~/Dropbox/R_sessions/Noise/genomic_noise_features.R")
 source("~/Dropbox/R_sessions/Noise/mESC_genomic_noise_features.R")
 
 library(ggplot2)
+library(robustbase)
+library(gtools)
 source("~/Dropbox/R_sessions/GGMike/theme_mike.R")
 
 mesc.vars <- colnames(genomic.features)[2:16]
 mesc.vars <- mesc.vars[!grepl(mesc.vars, pattern="(NMI)|(CGI_SIZE)|(cpg_)|(PHAST)")]
 
-mesc.genomic.vars <- paste(c("Mean",
-                             mesc.vars),
+mesc.genomic.vars <- paste(mesc.vars,
                            collapse=" + ")
 
 mesc.match <- merge(mesc.gene.summary, genomic.features,
                     by='GENE')
+
+# what about using the ranks?
+mesc.match$Noise.Rank <- order(mesc.match$CV2, decreasing=TRUE)
 #########################################
 ## univariate robust linear regression ##
 #########################################
 # this is plotting for presentation/manuscript figures
 mesc.univariate_list <- list()
+model.control <- lmrob.control(max.it=500, k.max=500, rel.tol=1e-7)
 
 mesc.var.names <- unlist(strsplit(mesc.genomic.vars, split=" + ", fixed=T))
 # remove redundant variables, i.e CpG island AND NMI
@@ -26,14 +31,13 @@ mesc.var.names <- unlist(strsplit(mesc.genomic.vars, split=" + ", fixed=T))
 mesc.var.names <- mesc.var.names[!grepl(mesc.var.names, pattern="(NMI)|(CGI_SIZE)|(cpg_)|(PHAST)")]
 
 for(x in seq_along(mesc.var.names)){
-  .variable <- paste(mesc.var.names[x], sep=" + ")
+  .variable <- paste(mesc.var.names[x], collapse=" + ")
   .glm.form <- as.formula(paste("Residual.CV2", .variable, sep=" ~ "))
 
-  m.rlm <- rlm(.glm.form, data=mesc.match)
+  m.rlm <- glm(.glm.form, data=mesc.match)
   m.robust <- summary(m.rlm)
   m.rlm.res <- as.data.frame(m.robust$coefficients)
-  m.rlm.res$Pval <- 2*pt(-abs(m.rlm.res[, 3]), df=3)
-  m.rlm.res$Sig <- as.numeric(m.rlm.res$Pval <= 0.05)
+  m.rlm.res$Sig <- as.numeric(m.rlm.res$`Pr(>|t|)` <= 0.05)
   m.res.mat <- as.matrix(m.rlm.res)
   m.res.var <- m.res.mat[2, ]
   names(m.res.var) <- c("COEFF", "SE", "STAT", "P", "Sig")
@@ -42,6 +46,8 @@ for(x in seq_along(mesc.var.names)){
 
 mesc.rlm.df <- do.call(rbind.data.frame, mesc.univariate_list)
 mesc.rlm.df$Predictor <- rownames(mesc.rlm.df)
+mesc.rlm.df$Padjust <- p.adjust(mesc.rlm.df$P)
+mesc.rlm.df$Sig <- as.numeric(mesc.rlm.df$Padjust <= 0.01)
 mesc.rlm.df$Direction <- "NoEffect"
 mesc.rlm.df$Direction[mesc.rlm.df$COEFF < 0 & mesc.rlm.df$Sig == 1] <- "Less"
 mesc.rlm.df$Direction[mesc.rlm.df$COEFF > 0 & mesc.rlm.df$Sig == 1] <- "More"
@@ -87,13 +93,13 @@ ggsave(univar.plot,
 mesc.glm.form <- as.formula(paste("Residual.CV2",
                                   mesc.genomic.vars, sep=" ~ "))
 
-mesc.rlm <- rlm(mesc.glm.form, data=mesc.match)
+mesc.rlm <- lmrob(mesc.glm.form, data=mesc.match, control=model.control)
 mesc.robust <- summary(mesc.rlm)
 mesc.rlm.res <- as.data.frame(mesc.robust$coefficients)
-mesc.rlm.res$Pval <- 2*pt(-abs(mesc.rlm.res[, 3]), df=dim(mesc.match)[2]-1)
-mesc.rlm.res$Sig <- as.numeric(mesc.rlm.res$Pval <= 0.05)
+mesc.rlm.res$Padjust <- p.adjust(mesc.rlm.res$`Pr(>|t|)`)
+mesc.rlm.res$Sig <- as.numeric(mesc.rlm.res$Padjust <= 0.01)
 mesc.rlm.res$Predictor <- rownames(mesc.rlm.res)
-colnames(mesc.rlm.res) <- c("COEFF", "SE", "STAT", "P", "Sig", "Predictor")
+colnames(mesc.rlm.res) <- c("COEFF", "SE", "STAT", "P", "Padjust", "Sig", "Predictor")
 mesc.rlm.res$Direction <- "NoEffect"
 mesc.rlm.res$Direction[mesc.rlm.res$COEFF < 0 & mesc.rlm.res$Sig == 1] <- "Less"
 mesc.rlm.res$Direction[mesc.rlm.res$COEFF > 0 & mesc.rlm.res$Sig == 1] <- "More"
@@ -160,7 +166,7 @@ all.plot <- ggplot(mesc.rlm.all,
         axis.text=element_text(size=16)) +
   labs(x="Annotation", y="t-statistic") +
   guides(fill=FALSE, shape=FALSE) +
-  scale_y_continuous(limits=c(-50, 50))
+  scale_y_continuous(limits=c(-25, 25), oob=squish)
 
 ggsave(all.plot,
        filename="~/Dropbox/Noise_genomics/Figures/ms_figures/mESC_allLM.png",
@@ -175,7 +181,7 @@ mesc.match$CpGisland <- factor(mesc.match$N_CpG,
 cpg.cols <- c("#027E00", "#00DDEC")
 names(cpg.cols) <- levels(mesc.match$CpGisland)
 
-tc_cpg <- ggplot(mesc.match, aes(x=CpGisland, y=Residual.CV2, colour=CpGisland)) + 
+tc_cpg <- ggplot(mesc.match, aes(x=CpGisland, y=Noise.Rank, colour=CpGisland)) + 
   theme_mike() + 
   geom_jitter(position=position_jitterdodge(jitter.height=0,
                                             jitter.width=1.5),

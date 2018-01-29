@@ -3,14 +3,13 @@ source("~/Dropbox/R_sessions/Noise/human_genomic_noise_features.R")
 source("~/Dropbox/R_sessions/Noise/human_beta_islet_genomic_noise_features.R")
 
 library(ggplot2)
-library(MASS)
+library(robustbase)
 source("~/Dropbox/R_sessions/GGMike/theme_mike.R")
 
 beta.vars <- colnames(genomic.features)
 beta.vars <- beta.vars[!grepl(beta.vars, pattern="(NMI)|(CGI_SIZE)|(cpg_)")]
 
-beta.genomic.vars <- paste(c("Mean",
-                             beta.vars),
+beta.genomic.vars <- paste(beta.vars,
                            collapse=" + ")
 
 beta.match <- merge(beta.gene.summary, genomic.features,
@@ -21,29 +20,31 @@ beta.match <- merge(beta.gene.summary, genomic.features,
 #########################################
 # this is plotting for presentation/manuscript figures
 beta.univariate_list <- list()
+model.control <- lmrob.control(max.it=500, k.max=500, rel.tol=1e-7)
 
 beta.var.names <- unlist(strsplit(beta.genomic.vars, split=" + ", fixed=T))
 # remove redundant variables, i.e CpG island AND NMI
 # remove CpG island characteristics
-beta.var.names <- beta.var.names[!grepl(beta.var.names, pattern="(NMI)|(CGI_SIZE)|(cpg_)|(CGI)|(GENE)")]
+beta.var.names <- beta.var.names[!grepl(beta.var.names, 
+                                        pattern="(NMI)|(CGI_SIZE)|(cpg_)|(CGI)|(GENE)|(Mean)")]
 
 for(x in seq_along(beta.var.names)){
   .variable <- paste(beta.var.names[x], sep=" + ")
   .glm.form <- as.formula(paste("Residual.CV2", .variable, sep=" ~ "))
   
-  m.rlm <- rlm(.glm.form, data=beta.match)
+  m.rlm <- lmrob(.glm.form, data=beta.match, control=model.control)
   m.robust <- summary(m.rlm)
   m.rlm.res <- as.data.frame(m.robust$coefficients)
-  m.rlm.res$Pval <- 2*pt(-abs(m.rlm.res[, 3]), df=3)
-  m.rlm.res$Sig <- as.numeric(m.rlm.res$Pval <= 0.05)
   m.res.mat <- as.matrix(m.rlm.res)
   m.res.var <- m.res.mat[2, ]
-  names(m.res.var) <- c("COEFF", "SE", "STAT", "P", "Sig")
+  names(m.res.var) <- c("COEFF", "SE", "STAT", "P")
   beta.univariate_list[[beta.var.names[x]]] <- as.list(m.res.var)
 }
 
 beta.rlm.df <- do.call(rbind.data.frame, beta.univariate_list)
 beta.rlm.df$Predictor <- rownames(beta.rlm.df)
+beta.rlm.df$Padjust <- p.adjust(beta.rlm.df$P)
+beta.rlm.df$Sig <- as.numeric(beta.rlm.df$Padjust <= 0.01)
 beta.rlm.df$Direction <- "NoEffect"
 beta.rlm.df$Direction[beta.rlm.df$COEFF < 0 & beta.rlm.df$Sig == 1] <- "Less"
 beta.rlm.df$Direction[beta.rlm.df$COEFF > 0 & beta.rlm.df$Sig == 1] <- "More"
@@ -84,20 +85,19 @@ ggsave(univar.plot,
 ###########################################
 ## multivariate robust linear regression ##
 ###########################################
-beta.genomic.vars <- paste(c("Mean",
-                             beta.var.names),
+beta.genomic.vars <- paste(beta.var.names,
                            collapse=" + ")
 
 beta.glm.form <- as.formula(paste("Residual.CV2",
                                   beta.genomic.vars, sep=" ~ "))
 
-beta.rlm <- rlm(beta.glm.form, data=beta.match)
+beta.rlm <- lmrob(beta.glm.form, data=beta.match, control=model.control)
 beta.robust <- summary(beta.rlm)
 beta.rlm.res <- as.data.frame(beta.robust$coefficients)
-beta.rlm.res$Pval <- 2*pt(-abs(beta.rlm.res[, 3]), df=dim(beta.match)[2]-1)
-beta.rlm.res$Sig <- as.numeric(beta.rlm.res$Pval <= 0.05)
+beta.rlm.res$Padjust <- p.adjust(beta.rlm.res$`Pr(>|t|)`)
+beta.rlm.res$Sig <- as.numeric(beta.rlm.res$Padjust <= 0.01)
 beta.rlm.res$Predictor <- rownames(beta.rlm.res)
-colnames(beta.rlm.res) <- c("COEFF", "SE", "STAT", "P", "Sig", "Predictor")
+colnames(beta.rlm.res) <- c("COEFF", "SE", "STAT", "P", "Padjust", "Sig", "Predictor")
 beta.rlm.res$Direction <- "NoEffect"
 beta.rlm.res$Direction[beta.rlm.res$COEFF < 0 & beta.rlm.res$Sig == 1] <- "Less"
 beta.rlm.res$Direction[beta.rlm.res$COEFF > 0 & beta.rlm.res$Sig == 1] <- "More"
@@ -181,7 +181,7 @@ tc_cpg <- ggplot(beta.match, aes(x=CpGisland, y=Residual.CV2, colour=CpGisland))
               alpha=0.7) +
   geom_boxplot(width=0.5, fill='white', colour='black') +
   scale_colour_manual(values=cpg.cols) +
-  labs(x="Overlapping CpG island", y=expression(paste(alpha["r"], " Overdispersion"))) +
+  labs(x="Overlapping CpG island", y=expression(paste("Residual CV"^2))) +
   guides(colour=FALSE)
 
 ggsave(tc_cpg,

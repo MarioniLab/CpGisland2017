@@ -32,6 +32,9 @@ all.merge <- do.call(rbind.data.frame, list("mESC"=mouse.esc,
                                             "hAlpha"=human.alpha,
                                             "hBeta"=human.beta,
                                             "hESC"=human.esc))
+
+# drop the transcript lengths, they aren't required
+all.merge <- all.merge[all.merge$Predictor != "Transcript length", ]
 all.merge$Sig <- as.factor(all.merge$Sig)
 
 dir.cols <- c("#62148f", "#feaf10", "#878787")
@@ -57,7 +60,7 @@ all.lm <- ggplot(all.merge,
   geom_hline(mapping=aes(yintercept=0), linetype="dashed", colour="grey") +
   geom_point(size=4) + 
   theme_mike() +
-  scale_y_continuous(limits=c(-30, 30), oob=squish) +
+  scale_y_continuous(limits=c(-20, 20), oob=squish) +
   scale_fill_manual(values=species.cols) +
   scale_shape_manual(values=c(21:25)) +
   scale_alpha_manual(values=sig.alpha) +
@@ -67,14 +70,15 @@ all.lm <- ggplot(all.merge,
              space="free_x",
              scales="free_x", switch="x") +
   theme(panel.spacing=unit(0.25, "lines"),
-        strip.text=element_text(angle=90, vjust=1, hjust=0.5, size=16,
+        strip.text=element_text(angle=0, vjust=1, hjust=0.5, size=16,
                                 family='Helvetica', face='plain'),
         strip.background=element_blank()) +
   theme(axis.text.x=element_blank(),
+        axis.title.x=element_blank(),
         axis.ticks.x=element_blank(),
         axis.line.x=element_blank())
 
 ggsave(all.lm,
        filename="~/Dropbox/Noise_genomics/Figures/ms_figures/AllLM_univariate-CGI_figure.png",
-       height=5.25, width=11.75, dpi=300)
+       height=5.25, width=6.75, dpi=300)
 
