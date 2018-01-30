@@ -44,7 +44,7 @@ for(x in seq_along(mesc.vars)){
 }
 
 # add the mean expression on it's own
-.glm.form <- as.formula(paste("Residual.CV2", "Recip.Mean", sep=" ~ "))
+.glm.form <- as.formula(paste("Residual.CV2", sep=" ~ "))
 
 m.rlm <- rlm(.glm.form, data=mesc.match)
 m.robust <- summary(m.rlm)

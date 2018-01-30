@@ -181,7 +181,7 @@ mesc.match$CpGisland <- factor(mesc.match$N_CpG,
 cpg.cols <- c("#027E00", "#00DDEC")
 names(cpg.cols) <- levels(mesc.match$CpGisland)
 
-tc_cpg <- ggplot(mesc.match, aes(x=CpGisland, y=Noise.Rank, colour=CpGisland)) + 
+tc_cpg <- ggplot(mesc.match, aes(x=CpGisland, y=Residual.CV2, colour=CpGisland)) + 
   theme_mike() + 
   geom_jitter(position=position_jitterdodge(jitter.height=0,
                                             jitter.width=1.5),

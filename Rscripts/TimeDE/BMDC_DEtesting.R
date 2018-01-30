@@ -607,8 +607,8 @@ ggsave(bmdc.pic.size.dens,
        filename="~/Dropbox/Noise_genomics/Figures/ms_figures/BMDC_PIC-CGIsize_density.png",
        height=4.25, width=4.75, dpi=300)
 
-
-# we should expect that the noisy genes in the unstimulated cells are also the ones that are up-regulated
+###########################################################################################################
+# we should expect that the noisy genes in the unstimulated cells are also the ones that are up-regulated #
 # post-stimulation
 # split by stimulation
 #########
@@ -629,7 +629,7 @@ fit <- glmgam.fit(cbind(a0 = 1, a1tilde=1/lps.0h.mean[!useForFit]),
                   lps.0h.cv2[!useForFit])
 
 # the negative values don't make a whole lot of sense, they should start at 0
-lps.0h.rCV2 <- fitted.values(fit) - lps.0h.cv2[!useForFit]
+lps.0h.rCV2 <- abs( lps.0h.cv2[!useForFit] - fitted.values(fit))
 
 # plot gene expression varibility Vs logFC
 lps.0h.sum <- do.call(cbind.data.frame,
@@ -647,24 +647,24 @@ lps.0h.genomic <- merge(lps.0h.demerge, mouse.genomic.features, by.x='gene_id', 
 # try a kernal SVM to find the decision boundary
 # DBSCAN doesn't work, kernel SVM is supervised, need an unsupervised approach
 # model-based clustering?
-set.seed(42)
-mc.test <- Mclust(sqrt(lps.0h.genomic[, c("Mean", "CV2")]))
-
-fviz_mclust(mc.test, "classification", palette="jco",
-            geom="point", pointsize=1.5, xlab="Mean", ylab="CV2")
-
-lps.0h.genomic$Mclust <- mc.test$classification
+# set.seed(42)
+# mc.test <- Mclust(sqrt(lps.0h.genomic[, c("Mean", "CV2")]))
+# 
+# fviz_mclust(mc.test, "classification", palette="jco",
+#             geom="point", pointsize=1.5, xlab="Mean", ylab="CV2")
+# 
+# lps.0h.genomic$Mclust <- mc.test$classification
 
 # whilst some of these genes are no doubt genuinely functional,
 # the majority of them have a Gm- or ribosomal protein pseudogene designation
 # the offending genes are primarily in clusters 1, and 8
 # what are these genes?
 
-plot(lps.0h.genomic$Mean,
-     lps.0h.genomic$CV2,
-     xlab="Mean expression", ylab=expression("CV"^2))
-points(lps.0h.genomic$Mean[lps.0h.genomic$Mclust %in% c(1, 8)],
-       lps.0h.genomic$CV2[lps.0h.genomic$Mclust %in% c(1, 8)], col='green')
+# plot(lps.0h.genomic$Mean,
+#      lps.0h.genomic$CV2,
+#      xlab="Mean expression", ylab=expression("CV"^2))
+# points(lps.0h.genomic$Mean[lps.0h.genomic$Mclust %in% c(1, 8)],
+#        lps.0h.genomic$CV2[lps.0h.genomic$Mclust %in% c(1, 8)], col='green')
 
 # split CGIs into size bins on quartiles
 lps.0h.genomic$CGI_SIZE.group <- as.character(cut(lps.0h.genomic$CGI_SIZE.kb,
@@ -678,8 +678,8 @@ lps.0h.genomic$CGI_SIZE.group <- factor(lps.0h.genomic$CGI_SIZE.group,
                                                 levels=c("Absent", "(0,0.5]", "(0.5,1]", "(1,1.5]",  "(1.5,2]",
                                                          "(2,4.585]"))
 # exclude the bad genes
-bmdc.bad_genes <- as.character(lps.0h.genomic$gene_id[lps.0h.genomic$Mclust %in% c(1, 8)])
-lps.0h.genomic <- lps.0h.genomic[!lps.0h.genomic$gene_id %in% bmdc.bad_genes,]
+# bmdc.bad_genes <- as.character(lps.0h.genomic$gene_id[lps.0h.genomic$Mclust %in% c(1, 8)])
+# lps.0h.genomic <- lps.0h.genomic[!lps.0h.genomic$gene_id %in% bmdc.bad_genes,]
 
 # remove the absent factor level before running rLM
 lps.0h.genomic$CGI_SIZE.group <- factor(lps.0h.genomic$CGI_SIZE.group,
@@ -709,7 +709,12 @@ lps.cv2.by.cgi <- ggplot(lps.0h.genomic[lps.0h.genomic$N_CpG == 1,],
   theme(axis.text=element_text(size=16),
         axis.title=element_text(size=16))
 
-lps.rcv2.by.cgi <- ggplot(lps.0h.genomic[lps.0h.genomic$N_CpG == 1 & lps.0h.genomic$rCV2 >= 0,],
+ggsave(lps.cv2.by.cgi,
+       filename="~/Dropbox/Noise_genomics/Figures/ms_figures/BMDC_LPS-CGIsize-CV2-scatter.png",
+       width=7.75, height=4.25, dpi=300)
+
+
+lps.rcv2.by.cgi <- ggplot(lps.0h.genomic[lps.0h.genomic$N_CpG == 1,],
                          aes(y=rCV2, x=CGI_SIZE.group, fill=t0_t1.Diff,
                              colour=t0_t1.Diff, group=t0_t1.Diff)) +
   geom_jitter(alpha=0.5, 
@@ -726,9 +731,54 @@ lps.rcv2.by.cgi <- ggplot(lps.0h.genomic[lps.0h.genomic$N_CpG == 1 & lps.0h.geno
   theme(axis.text=element_text(size=16),
         axis.title=element_text(size=16))
 
-ggsave(lps.cv2.by.cgi,
-       filename="~/Dropbox/Noise_genomics/Figures/ms_figures/BMDC_LPS-CGIsize-CV2-scatter.png",
+ggsave(lps.rcv2.by.cgi,
+       filename="~/Dropbox/Noise_genomics/Figures/ms_figures/BMDC_LPS-CGIsize-residualCV2-scatter.png",
        width=7.75, height=4.25, dpi=300)
+
+# show the baseline mean expression
+lps.mean.by.cgi <- ggplot(lps.0h.genomic[lps.0h.genomic$N_CpG == 1,],
+       aes(y=Mean, x=CGI_SIZE.group, fill=t0_t1.Diff,
+           colour=t0_t1.Diff, group=t0_t1.Diff)) +
+  geom_jitter(alpha=0.5, 
+              position=position_jitterdodge(jitter.width=0.5)) +
+  theme_mike() +
+  stat_summary(fun.y=mean, colour="grey", geom="point", size=4,
+               aes(group=t0_t1.Diff), position=position_dodge(width=0.75)) + 
+  scale_colour_manual(values=c("darkblue", "yellow", "darkred")) +
+  theme(axis.text.x=element_text(angle=90, vjust=0.5)) +
+  labs(x="CpG island size interval (kb)",
+       y=expression(paste("Mean Log"[2], " Normalized  Expression"))) +
+  guides(colour=FALSE, fill=FALSE) +
+  theme(axis.text=element_text(size=16),
+        axis.title=element_text(size=16))
+
+ggsave(lps.mean.by.cgi,
+       filename="~/Dropbox/Noise_genomics/Figures/ms_figures/BMDC_LPS-CGIsize-Mean-scatter.png",
+       width=7.75, height=5.25, dpi=300)
+
+
+## what about the non-CpG island genes?  Is the same pattern seen there?
+lps.cv2.by.non_cgi <- ggplot(lps.0h.genomic[lps.0h.genomic$N_CpG == 0,],
+                          aes(y=rCV2, x=CGI_SIZE.group, fill=t0_t1.Diff,
+                              colour=t0_t1.Diff, group=t0_t1.Diff)) +
+  geom_jitter(alpha=0.5, 
+              position=position_jitterdodge(jitter.width=0.5)) +
+  #geom_boxplot(colour="black") + 
+  theme_mike() +
+  stat_summary(fun.y=mean, colour="grey", geom="point", size=4,
+               aes(group=t0_t1.Diff), position=position_dodge(width=0.75)) + 
+  scale_colour_manual(values=c("darkblue", "yellow", "darkred")) +
+  theme(axis.text.x=element_text(angle=90, vjust=0.5)) +
+  labs(x="CpG island size interval (kb)",
+       y=expression(paste("Residual CV"^2))) +
+  guides(colour=FALSE, fill=FALSE) +
+  theme(axis.text=element_text(size=16),
+        axis.title=element_text(size=16))
+
+ggsave(lps.cv2.by.non_cgi,
+       filename="~/Dropbox/Noise_genomics/Figures/ms_figures/BMDC_LPS-nonCGI-residualCV2-scatter.png",
+       width=7.75, height=5.25, dpi=300)
+
 
 lps.cv2.by.cgi.cdf <- ggplot(lps.0h.genomic[lps.0h.genomic$N_CpG == 1,],
        aes(x=CV2,
@@ -776,31 +826,45 @@ int4.y <- lps.0h.genomic$CV2[lps.0h.genomic$CGI_SIZE.group == "(1.5,2]" & lps.0h
 ks.test(int4.x, int4.y, alternative="less")
 
 # (2,2.5]
-int5.x <- lps.0h.genomic$CV2[lps.0h.genomic$CGI_SIZE.group == "(2,2.5]" & lps.0h.genomic$t0_t1.Diff == 1]
-int5.y <- lps.0h.genomic$CV2[lps.0h.genomic$CGI_SIZE.group == "(2,2.5]" & lps.0h.genomic$t0_t1.Diff == 0]
+int5.x <- lps.0h.genomic$CV2[lps.0h.genomic$CGI_SIZE.group == "(2,4.585]" & lps.0h.genomic$t0_t1.Diff == 1]
+int5.y <- lps.0h.genomic$CV2[lps.0h.genomic$CGI_SIZE.group == "(2,4.585]" & lps.0h.genomic$t0_t1.Diff == 0]
 ks.test(int5.x, int5.y, alternative="less")
 
-# all vs all
-ggplot(lps.0h.genomic[lps.0h.genomic$N_CpG == 1,],
-       aes(y=rCV2, x=t0_t1.Diff, fill=t0_t1.Diff,
-           colour=t0_t1.Diff)) +
-  geom_boxplot() +
-  geom_jitter(alpha=0.5, 
-              position=position_jitterdodge(jitter.width=0.5)) +
-  #geom_boxplot(colour="black") + 
-  theme_mike() +
-  scale_fill_manual(values=c("darkblue", "yellow", "darkred")) +
-  scale_colour_manual(values=c("darkblue", "yellow", "darkred")) +
-  theme(axis.text.x=element_text(angle=90, vjust=0.5)) +
-  labs(x="CpG island size interval (kb)",
-       y=expression(paste("Residual CV"^2))) +
-  guides(colour=FALSE, fill=FALSE) +
-  theme(axis.text=element_text(size=16),
-        axis.title=element_text(size=16))
+# do you see the same effect with the absolute residual CV^2?
+## set up a kolmogorov-smirnoff test between the undiff and up-diff for each CpG island size interval
+# (0,0.5]
+rcv2.int1.x <- lps.0h.genomic$rCV2[lps.0h.genomic$CGI_SIZE.group == "(0,0.5]" & lps.0h.genomic$t0_t1.Diff == 1]
+rcv2.int1.y <- lps.0h.genomic$rCV2[lps.0h.genomic$CGI_SIZE.group == "(0,0.5]" & lps.0h.genomic$t0_t1.Diff == 0]
+ks.test(rcv2.int1.x, rcv2.int1.y, alternative="less")
 
-int_all.x <- lps.0h.genomic$rCV2[lps.0h.genomic$t0_t1.Diff == 1]
-int_all.y <- lps.0h.genomic$rCV2[lps.0h.genomic$t0_t1.Diff == 0]
-ks.test(int_all.x, int_all.y, alternative="two.sided")
+# (0.5,1]
+rcv2.int2.x <- lps.0h.genomic$rCV2[lps.0h.genomic$CGI_SIZE.group == "(0.5,1]" & lps.0h.genomic$t0_t1.Diff == 1]
+rcv2.int2.y <- lps.0h.genomic$rCV2[lps.0h.genomic$CGI_SIZE.group == "(0.5,1]" & lps.0h.genomic$t0_t1.Diff == 0]
+ks.test(rcv2.int2.x, rcv2.int2.y, alternative="less")
+
+# (1,1.5]
+rcv2.int3.x <- lps.0h.genomic$rCV2[lps.0h.genomic$CGI_SIZE.group == "(1,1.5]" & lps.0h.genomic$t0_t1.Diff == 1]
+rcv2.int3.y <- lps.0h.genomic$rCV2[lps.0h.genomic$CGI_SIZE.group == "(1,1.5]" & lps.0h.genomic$t0_t1.Diff == 0]
+ks.test(rcv2.int3.x, rcv2.int3.y, alternative="less")
+
+# (1.5,2]
+rcv2.int4.x <- lps.0h.genomic$rCV2[lps.0h.genomic$CGI_SIZE.group == "(1.5,2]" & lps.0h.genomic$t0_t1.Diff == 1]
+rcv2.int4.y <- lps.0h.genomic$rCV2[lps.0h.genomic$CGI_SIZE.group == "(1.5,2]" & lps.0h.genomic$t0_t1.Diff == 0]
+ks.test(rcv2.int4.x, rcv2.int4.y, alternative="less")
+
+# (2,4.585]
+rcv2.int5.x <- lps.0h.genomic$rCV2[lps.0h.genomic$CGI_SIZE.group == "(2,4.585]" & lps.0h.genomic$t0_t1.Diff == 1]
+rcv2.int5.y <- lps.0h.genomic$rCV2[lps.0h.genomic$CGI_SIZE.group == "(2,4.585]" & lps.0h.genomic$t0_t1.Diff == 0]
+ks.test(rcv2.int5.x, rcv2.int5.y, alternative="less")
+
+int_all.x <- lps.0h.genomic$CV2[lps.0h.genomic$t0_t1.Diff == 1]
+int_all.y <- lps.0h.genomic$CV2[lps.0h.genomic$t0_t1.Diff == 0]
+int_all.d <- lps.0h.genomic$CV2[lps.0h.genomic$t0_t1.Diff == -1]
+ks.test(int_all.x, int_all.y, alternative="less")
+ks.test(int_all.x, int_all.d, alternative="less")
+
+# fit a single model, peform ANOVA
+
 
 #########
 ## PIC ##
@@ -820,7 +884,7 @@ smoothScatter(x=pic.0h.mean[!useForFit], y=pic.0h.cv2[!useForFit])
 # fit with a gamma-distributed GLM
 fit <- glmgam.fit(cbind(a0 = 1, a1tilde=1/pic.0h.mean[!useForFit]), 
                   pic.0h.cv2[!useForFit])
-pic.0h.rCV2 <- fitted.values(fit) - pic.0h.cv2[!useForFit]
+pic.0h.rCV2 <- abs(pic.0h.cv2[!useForFit] - fitted.values(fit))
 
 # plot gene expression varibility Vs logFC
 pic.0h.sum <- do.call(cbind.data.frame,
@@ -916,7 +980,7 @@ smoothScatter(x=pam.0h.mean[!useForFit], y=pam.0h.cv2[!useForFit])
 # fit with a gamma-distributed GLM
 fit <- glmgam.fit(cbind(a0 = 1, a1tilde=1/pam.0h.mean[!useForFit]), 
                   pam.0h.cv2[!useForFit])
-pam.0h.rCV2 <- fitted.values(fit) - pam.0h.cv2[!useForFit]
+pam.0h.rCV2 <- abs(pam.0h.cv2[!useForFit] - fitted.values(fit))
 
 # plot gene expression varibility Vs logFC
 pam.0h.sum <- do.call(cbind.data.frame,

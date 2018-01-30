@@ -46,19 +46,19 @@ names(sig.alpha) <- levels(all.merge$Sig)
 
 all.merge$Predictor <- reorder(all.merge$Predictor,
                                -all.merge$STAT)
-all.merge$Id <- as.factor(with(all.merge, 
-                               order(-ave(all.merge$STAT,
-                                          all.merge$Predictor, FUN=max), all.merge$STAT)))
+# all.merge$Id <- as.factor(with(all.merge, 
+#                                order(-ave(all.merge$STAT,
+#                                           all.merge$Predictor, FUN=max), all.merge$STAT)))
 
 # order the predictor variables by STAT in reverse ordrer
 # need to manually add the panel names as the X-axis ticks
 all.lm <- ggplot(all.merge,
-                 aes(x=reorder(Id, -STAT),
+                 aes(x=reorder(Predictor, -STAT),
                      y=STAT, fill=Species, 
                      shape=Tissue,
                      alpha=Sig)) +
   geom_hline(mapping=aes(yintercept=0), linetype="dashed", colour="grey") +
-  geom_point(size=4) + 
+  geom_point(size=6, position=position_dodge(width=1.0)) + 
   theme_mike() +
   scale_y_continuous(limits=c(-20, 20), oob=squish) +
   scale_fill_manual(values=species.cols) +
@@ -69,7 +69,7 @@ all.lm <- ggplot(all.merge,
   facet_grid(~Predictor, shrink=TRUE,
              space="free_x",
              scales="free_x", switch="x") +
-  theme(panel.spacing=unit(0.25, "lines"),
+  theme(panel.spacing=unit(0.75, "lines"),
         strip.text=element_text(angle=0, vjust=1, hjust=0.5, size=16,
                                 family='Helvetica', face='plain'),
         strip.background=element_blank()) +
