@@ -45,15 +45,17 @@ mesc.merge$CGI_SIZE.group <- factor(mesc.merge$CGI_SIZE.group,
 ########################################
 
 # define active, repressed and poised enhancers based on H3K27me3 and H3K4me3
-minimums <- function(x) which(x - shift(x, 1) < 5e-5  & x - shift(x, 1, type='lead') < 5e-5)
+minimums <- function(x) which(x - data.table::shift(x, 1) < 5e-5  & x - data.table::shift(x, 1, type='lead') < 5e-5)
 
 # find the local minimum point of the kernel density, with default bandwidth
 # promoters below are inactive and above are active
 mesc.merge$ChIP_Ratio <- mesc.merge$H3K27me3/mesc.merge$H3K4me3
 
-ratio.min.value <- density(mesc.merge$ChIP_Ratio)$x[(minimums(density(mesc.merge$ChIP_Ratio)$y)[1])]
-k4me3.min.value <- density(mesc.merge$H3K4me3)$x[(minimums(density(mesc.merge$H3K4me3)$y)[1])]
-k27me3.min.value <- mean(mesc.merge$H3K27me3)
+ratio.min.value <- 1.5*density(mesc.merge$ChIP_Ratio)$x[(minimums(density(mesc.merge$ChIP_Ratio)$y)[1])]
+k4me3.min.value <- 1.5*density(mesc.merge$H3K4me3)$x[(minimums(density(mesc.merge$H3K4me3)$y)[1])]
+# there isn't an obvious dip in H3K27me3 signal, more just a long tail.  Maybe the median as it should be quite low.
+k27me3.min.value <- 1.5*density(mesc.merge$H3K4me3)$x[(minimums(density(mesc.merge$H3K4me3)$y)[1])]
+#k27me3.min.value <- 1.5*median(mesc.merge$H3K27me3)
 
 mesc.merge$ChIP_Ratio.bin <- as.numeric(mesc.merge$ChIP_Ratio >= ratio.min.value)
 mesc.merge$H3K4me3.bin <- as.numeric(mesc.merge$H3K4me3 >= k4me3.min.value)
@@ -100,12 +102,12 @@ mesc.merge$PromoterActivity[(mesc.merge$H3K27me3.bin == 0) &
                               (mesc.merge$H3K4me3.bin == 0)] <- "Bivalent"
 
 mesc.merge$PromoterActivity <- factor(mesc.merge$PromoterActivity,
-                                      labels=c("H3K27me3", "Bivalent", "H3K4me3"),
-                                      levels=c("H3K27me3", "Bivalent", "H3K4me3"))
+                                      labels=c("H3K4me3", "H3K27me3", "Bivalent"),
+                                      levels=c("H3K4me3", "H3K27me3", "Bivalent"))
 
 chip.boundary <- ggplot(mesc.merge, aes(x=H3K27me3, y=H3K4me3, colour=PromoterActivity)) +
   geom_point(alpha=0.4) + theme_mike() +
-  scale_colour_manual(values=c("#a614ef", "#11d101", "#ff7306",  "#f0db87")) +
+  scale_colour_manual(values=c("#ff7306", "#a614ef", "#11d101", "#f0db87")) +
   guides(colour=guide_legend(title='Promoter State'))
 
 ggsave(chip.boundary,
@@ -213,7 +215,7 @@ chip.all.plot <- ggplot(chip.rlm.all,
               position=position_jitterdodge(jitter.height=0,
                                             jitter.width=0.1)) +
   theme_mike() +
-  scale_fill_manual(values=c("#62148f", "#feaf10", "#878787")) +
+  scale_fill_manual(values=effect.cols) +
   scale_shape_manual(values=c(21, 23)) +
   theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1)) +
   labs(x="Annotation", y="t-statistic") +
@@ -239,7 +241,7 @@ all.plot <- ggplot(mesc.rlm.all,
               position=position_jitterdodge(jitter.height=0,
                                             jitter.width=0.1)) +
   theme_mike() +
-  scale_fill_manual(values=c("#62148f", "#feaf10", "#878787")) +
+  scale_fill_manual(values=effect.cols) +
   scale_shape_manual(values=c(21, 23)) +
   theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1)) +
   labs(x="Annotation", y="t-statistic") +
@@ -304,8 +306,8 @@ m.rlm.res$Sig <- as.numeric(m.rlm.res$`Pr(>|t|)` <= 0.05)
 m.res.mat <- as.matrix(m.rlm.res)
 m.res.var <- m.res.mat[c(2:3), ]
 colnames(m.res.var) <- c("COEFF", "SE", "STAT", "P", "Sig")
+biv.univariate_list[["PromoterActivityH3K27me3"]] <- as.list(m.res.var[2, ])
 biv.univariate_list[["PromoterActivityBivalent"]] <- as.list(m.res.var[1, ])
-biv.univariate_list[["PromoterActivityH3K4me3"]] <- as.list(m.res.var[1, ])
 
 biv.rlm.df <- do.call(rbind.data.frame, biv.univariate_list)
 biv.rlm.df$Predictor <- rownames(biv.rlm.df)
@@ -320,7 +322,7 @@ biv.rlm.df$Predictor[biv.rlm.df$Predictor == "Recip.Mean"] <- "Mean expression"
 biv.rlm.df$Predictor[biv.rlm.df$Predictor == "cpg_RATIO"] <- "CpG dinucleotide ratio"
 biv.rlm.df$Predictor[biv.rlm.df$Predictor == "CGI_SIZE.kb"] <- "CpG island size"
 biv.rlm.df$Predictor[biv.rlm.df$Predictor == "PromoterActivityBivalent"] <- "Bivalent Promoter"
-biv.rlm.df$Predictor[biv.rlm.df$Predictor == "PromoterActivityH3K4me3"] <- "Active Promoter"
+biv.rlm.df$Predictor[biv.rlm.df$Predictor == "PromoterActivityH3K27me3"] <- "Repressed Promoter"
 biv.rlm.df$Model <- "Univariate"
 
 write.table(biv.rlm.df,
@@ -330,9 +332,8 @@ write.table(biv.rlm.df,
 ######################
 ## Multivariate fit ##
 ######################
-
 bivalent.fit <- lmrob(Residual.CV2 ~  PromoterActivity + CGI_SIZE.kb,
-               data=mesc.merge, control=model.control)
+                      data=mesc.merge, control=model.control)
 bivalent.robust <- summary(bivalent.fit)
 bivalent.rlm.res <- as.data.frame(bivalent.robust$coefficients)
 n.params <- dim(bivalent.rlm.res)[1]
@@ -349,7 +350,7 @@ bivalent.rlm.res$Direction[bivalent.rlm.res$COEFF > 0 & bivalent.rlm.res$Sig == 
 # give the features more informative/better formated names
 bivalent.rlm.res$Predictor[bivalent.rlm.res$Predictor == "Recip.Mean"] <- "Mean expression"
 bivalent.rlm.res$Predictor[bivalent.rlm.res$Predictor == "PromoterActivityBivalent"] <- "Bivalent Promoter"
-bivalent.rlm.res$Predictor[bivalent.rlm.res$Predictor == "PromoterActivityH3K4me3"] <- "Active Promoter"
+bivalent.rlm.res$Predictor[bivalent.rlm.res$Predictor == "PromoterActivityH3K27me3"] <- "Repressed Promoter"
 bivalent.rlm.res$Predictor[bivalent.rlm.res$Predictor == "cpg_RATIO"] <- "CpG dinucleotide ratio"
 bivalent.rlm.res$Predictor[bivalent.rlm.res$Predictor == "CGI_SIZE.kb"] <- "CpG island size"
 
@@ -370,14 +371,18 @@ ggsave(biv.plot,
        filename="~/Dropbox/Noise_genomics/Figures/ms_figures/mESC_bivalent-multivariateLM.png",
        height=4.75, width=5.75, dpi=300)
 
+chip.cols <- c("#ff7306", "#11d101", "#a614ef")
+names(chip.cols) <- c("H3K4me3", "Bivalent", "H3K27me3")
+
 rcv.biv <- ggplot(mesc.merge,
                   aes(x=PromoterActivity, y=Residual.CV2, colour=PromoterActivity)) +
   geom_jitter(alpha=0.5) + theme_mike() +
   geom_boxplot(outlier.colour='black', outlier.size=1) +
-  scale_colour_manual(values=c("#a614ef", "#11d101", "#ff7306",  "#f0db87")) +
-  labs(x="Promoter State", y=expression(paste("Residual CV"^2))) +
+  scale_colour_manual(values=chip.cols) +
+  labs(x="Promoter State", y=expression(paste("|Residual CV"^2, "|"))) +
   guides(fill=FALSE, colour=FALSE) +
-  scale_x_discrete(labels=c("Repressed Promoter", "Bivalent Promoter", "Active Promoter")) +
+  scale_x_discrete(labels=c("Active Promoter", "Repressed Promoter", "Bivalent Promoter")) +
+  scale_y_continuous(limits=c(0, 15), oob=squish) +
   theme(axis.title.x=element_blank())
 
 ggsave(rcv.biv,
@@ -388,10 +393,10 @@ mean.biv <- ggplot(mesc.merge,
                    aes(x=PromoterActivity, y=Mean, colour=PromoterActivity)) +
   geom_jitter(alpha=0.5) + theme_mike() +
   geom_boxplot(outlier.colour='black', outlier.size=1) +
-  scale_colour_manual(values=c("#a614ef", "#11d101", "#ff7306",  "#f0db87")) +
+  scale_colour_manual(values=chip.cols) +
   labs(x="Promoter State", y=expression(paste("mean log"[2], " Expression"))) +
   guides(fill=FALSE, colour=FALSE) +
-  scale_x_discrete(labels=c("Repressed Promoter", "Bivalent Promoter", "Active Promoter")) +
+  scale_x_discrete(labels=c("Active Promoter", "Repressed Promoter", "Bivalent Promoter")) +
   theme(axis.title.x=element_blank())
 
 ggsave(mean.biv,
@@ -410,7 +415,7 @@ biv.all.plot <- ggplot(biv.rlm.all,
               position=position_jitterdodge(jitter.height=0,
                                             jitter.width=0.1)) +
   theme_mike() +
-  scale_fill_manual(values=c("#62148f", "#feaf10", "#878787")) +
+  scale_fill_manual(values=effect.cols) +
   scale_shape_manual(values=c(21, 23)) +
   theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1)) +
   labs(x="Annotation", y="t-statistic") +
