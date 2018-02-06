@@ -61,9 +61,10 @@ bmdc.pic.exprs <- bmdc.cells[, colnames(bmdc.cells) %in% pic.cells]
 ###############
 bmdc.lps.fit <- lmFit(bmdc.lps.exprs, bmdc.lps.design)
 bmdc.lps.constrast <- makeContrasts(contrasts=c("Time1h-Time0h",
-                                                       "Time2h-Time1h",
-                                                       "Time4h-Time2h",
-                                                       "Time6h-Time4h"),
+                                                "Time2h-Time1h",
+                                                "Time4h-Time2h",
+                                                "Time6h-Time4h",
+                                                "Time2h-Time0h"),
                                            levels=bmdc.lps.design)
 bmdc.lps.fit <- contrasts.fit(bmdc.lps.fit, contrasts=bmdc.lps.constrast)
 bmdc.lps.fit <- eBayes(bmdc.lps.fit)
@@ -133,6 +134,24 @@ bmdc.lps.de.res.4v6$Diff <- as.factor(bmdc.lps.de.res.4v6$Diff)
 
 bmdc.lps.de.res.4v6$gene_id <- rownames(bmdc.lps.de.res.4v6)
 
+
+##################
+### DE 0h vs 2h ##
+##################
+
+bmdc.lps.de.res.0v2 <- limma::topTable(bmdc.lps.fit, coef=5, n=Inf, sort="p", p=1.0)
+bmdc.lps.de.res.0v2$Sig <- 0
+bmdc.lps.de.res.0v2$Sig[bmdc.lps.de.res.0v2$adj.P.Val <= 0.01] <- 1
+bmdc.lps.de.res.0v2$Sig <- as.factor(bmdc.lps.de.res.0v2$Sig)
+
+bmdc.lps.de.res.0v2$Diff <- 0
+bmdc.lps.de.res.0v2$Diff[bmdc.lps.de.res.0v2$logFC < 0 & bmdc.lps.de.res.0v2$Sig == 1] <- -1
+bmdc.lps.de.res.0v2$Diff[bmdc.lps.de.res.0v2$logFC > 0 & bmdc.lps.de.res.0v2$Sig == 1] <- 1
+bmdc.lps.de.res.0v2$Diff <- as.factor(bmdc.lps.de.res.0v2$Diff)
+
+bmdc.lps.de.res.0v2$gene_id <- rownames(bmdc.lps.de.res.0v2)
+
+
 ###############
 ### Test PAM ##
 ###############
@@ -140,7 +159,8 @@ bmdc.pam.fit <- lmFit(bmdc.pam.exprs, bmdc.pam.design)
 bmdc.pam.constrast <- makeContrasts(contrasts=c("Time1h-Time0h",
                                                 "Time2h-Time1h",
                                                 "Time4h-Time2h",
-                                                "Time6h-Time4h"),
+                                                "Time6h-Time4h",
+                                                "Time2h-Time0h"),
                                     levels=bmdc.pam.design)
 bmdc.pam.fit <- contrasts.fit(bmdc.pam.fit, contrasts=bmdc.pam.constrast)
 bmdc.pam.fit <- eBayes(bmdc.pam.fit)
@@ -210,6 +230,23 @@ bmdc.pam.de.res.4v6$Diff <- as.factor(bmdc.pam.de.res.4v6$Diff)
 
 bmdc.pam.de.res.4v6$gene_id <- rownames(bmdc.pam.de.res.4v6)
 
+
+##################
+### DE 0h vs 2h ##
+##################
+
+bmdc.pam.de.res.0v2 <- limma::topTable(bmdc.pam.fit, coef=5, n=Inf, sort="p", p=1.0)
+bmdc.pam.de.res.0v2$Sig <- 0
+bmdc.pam.de.res.0v2$Sig[bmdc.pam.de.res.0v2$adj.P.Val <= 0.01] <- 1
+bmdc.pam.de.res.0v2$Sig <- as.factor(bmdc.pam.de.res.0v2$Sig)
+
+bmdc.pam.de.res.0v2$Diff <- 0
+bmdc.pam.de.res.0v2$Diff[bmdc.pam.de.res.0v2$logFC < 0 & bmdc.pam.de.res.0v2$Sig == 1] <- -1
+bmdc.pam.de.res.0v2$Diff[bmdc.pam.de.res.0v2$logFC > 0 & bmdc.pam.de.res.0v2$Sig == 1] <- 1
+bmdc.pam.de.res.0v2$Diff <- as.factor(bmdc.pam.de.res.0v2$Diff)
+
+bmdc.pam.de.res.0v2$gene_id <- rownames(bmdc.pam.de.res.0v2)
+
 ###############
 ### Test PIC ##
 ###############
@@ -218,7 +255,8 @@ bmdc.pic.fit <- lmFit(bmdc.pic.exprs, bmdc.pic.design)
 bmdc.pic.constrast <- makeContrasts(contrasts=c("Time1h-Time0h",
                                                 "Time2h-Time1h",
                                                 "Time4h-Time2h",
-                                                "Time6h-Time4h"),
+                                                "Time6h-Time4h",
+                                                "Time2h-Time0h"),
                                     levels=bmdc.pic.design)
 bmdc.pic.fit <- contrasts.fit(bmdc.pic.fit, contrasts=bmdc.pic.constrast)
 bmdc.pic.fit <- eBayes(bmdc.pic.fit)
@@ -288,6 +326,22 @@ bmdc.pic.de.res.4v6$Diff <- as.factor(bmdc.pic.de.res.4v6$Diff)
 
 bmdc.pic.de.res.4v6$gene_id <- rownames(bmdc.pic.de.res.4v6)
 
+##################
+### DE 0h vs 2h ##
+##################
+
+bmdc.pic.de.res.0v2 <- limma::topTable(bmdc.pic.fit, coef=5, n=Inf, sort="p", p=1.0)
+bmdc.pic.de.res.0v2$Sig <- 0
+bmdc.pic.de.res.0v2$Sig[bmdc.pic.de.res.0v2$adj.P.Val <= 0.01] <- 1
+bmdc.pic.de.res.0v2$Sig <- as.factor(bmdc.pic.de.res.0v2$Sig)
+
+bmdc.pic.de.res.0v2$Diff <- 0
+bmdc.pic.de.res.0v2$Diff[bmdc.pic.de.res.0v2$logFC < 0 & bmdc.pic.de.res.0v2$Sig == 1] <- -1
+bmdc.pic.de.res.0v2$Diff[bmdc.pic.de.res.0v2$logFC > 0 & bmdc.pic.de.res.0v2$Sig == 1] <- 1
+bmdc.pic.de.res.0v2$Diff <- as.factor(bmdc.pic.de.res.0v2$Diff)
+
+bmdc.pic.de.res.0v2$gene_id <- rownames(bmdc.pic.de.res.0v2)
+
 ################################################################################################
 ################################################################################################
 ###################################################################################
@@ -308,11 +362,15 @@ colnames(bmdc.lps.de.res.2v4) <- c(paste("t2_t4", colnames(bmdc.lps.de.res.2v4)[
 colnames(bmdc.lps.de.res.4v6) <- c(paste("t4_t6", colnames(bmdc.lps.de.res.4v6)[1:8],
                                          sep="."), "gene_id")
 
+colnames(bmdc.lps.de.res.0v2) <- c(paste("t0_t2", colnames(bmdc.lps.de.res.0v2)[1:8],
+                                         sep="."), "gene_id")
+
 
 bmdc.lps.de_list <- list("t0_t1"=bmdc.lps.de.res.0v1,
                          "t1_t2h"=bmdc.lps.de.res.1v2,
                          "t2_t4h"=bmdc.lps.de.res.2v4,
-                         "t4_t6h"=bmdc.lps.de.res.4v6)
+                         "t4_t6h"=bmdc.lps.de.res.4v6,
+                         "t0_t2h"=bmdc.lps.de.res.0v2)
 bmdc.lps_de.merge <- Reduce(x=bmdc.lps.de_list,
                             f=function(x, y) merge(x, y, by=c('gene_id')))
 
@@ -333,10 +391,15 @@ colnames(bmdc.pam.de.res.2v4) <- c(paste("t2_t4", colnames(bmdc.pam.de.res.2v4)[
 colnames(bmdc.pam.de.res.4v6) <- c(paste("t4_t6", colnames(bmdc.pam.de.res.4v6)[1:8],
                                          sep="."), "gene_id")
 
+colnames(bmdc.pam.de.res.0v2) <- c(paste("t0_t2", colnames(bmdc.pam.de.res.0v2)[1:8],
+                                         sep="."), "gene_id")
+
+
 bmdc.pam.de_list <- list("t0_t1"=bmdc.pam.de.res.0v1,
                          "t1_t2h"=bmdc.pam.de.res.1v2,
                          "t2_t4h"=bmdc.pam.de.res.2v4,
-                         "t4_t6h"=bmdc.pam.de.res.4v6)
+                         "t4_t6h"=bmdc.pam.de.res.4v6,
+                         "t0_t2h"=bmdc.pam.de.res.0v2)
 bmdc.pam_de.merge <- Reduce(x=bmdc.pam.de_list,
                             f=function(x, y) merge(x, y, by=c('gene_id')))
 
@@ -357,11 +420,14 @@ colnames(bmdc.pic.de.res.2v4) <- c(paste("t2_t4", colnames(bmdc.pic.de.res.2v4)[
 colnames(bmdc.pic.de.res.4v6) <- c(paste("t4_t6", colnames(bmdc.pic.de.res.4v6)[1:8],
                                                       sep="."), "gene_id")
 
+colnames(bmdc.pic.de.res.0v2) <- c(paste("t0_t2", colnames(bmdc.pic.de.res.0v2)[1:8],
+                                         sep="."), "gene_id")
 
 bmdc.pic.de_list <- list("t0_t1"=bmdc.pic.de.res.0v1,
                          "t1_t2h"=bmdc.pic.de.res.1v2,
                          "t2_t4h"=bmdc.pic.de.res.2v4,
-                         "t4_t6h"=bmdc.pic.de.res.4v6)
+                         "t4_t6h"=bmdc.pic.de.res.4v6,
+                         "t0_t2h"=bmdc.pic.de.res.0v2)
 bmdc.pic_de.merge <- Reduce(x=bmdc.pic.de_list,
                             f=function(x, y) merge(x, y, by=c('gene_id')))
 
@@ -375,6 +441,7 @@ bmdc.pic.genomic <- merge(mouse.genomic.features, bmdc.pic_de.merge, by.x='GENE'
 ###########
 bmdc.lps.0v1.merge <- merge(bmdc.lps.de.res.0v1, mouse.genomic.features, by.x='gene_id', by.y='GENE')
 bmdc.lps.1v2.merge <- merge(bmdc.lps.de.res.1v2, mouse.genomic.features, by.x='gene_id', by.y='GENE')
+bmdc.lps.0v2.merge <- merge(bmdc.lps.de.res.0v2, mouse.genomic.features, by.x='gene_id', by.y='GENE')
 
 # select only the up-regulated genes
 bmdc.lps.0v1.merge.cgi <- bmdc.lps.0v1.merge[bmdc.lps.0v1.merge$CGI_SIZE.kb != 0 &
@@ -383,14 +450,30 @@ bmdc.lps.0v1.merge.cgi <- bmdc.lps.0v1.merge[bmdc.lps.0v1.merge$CGI_SIZE.kb != 0
 bmdc.lps.1v2.merge.cgi <- bmdc.lps.1v2.merge[bmdc.lps.1v2.merge$CGI_SIZE.kb != 0 & 
                                                !is.na(bmdc.lps.1v2.merge$CGI_SIZE.kb) &
                                                bmdc.lps.1v2.merge$t1_t2.logFC > 0, ]
+bmdc.lps.0v2.merge.cgi <- bmdc.lps.0v2.merge[bmdc.lps.0v2.merge$CGI_SIZE.kb != 0 & 
+                                               !is.na(bmdc.lps.0v2.merge$CGI_SIZE.kb) &
+                                               bmdc.lps.0v2.merge$t0_t2.logFC > 0, ]
 
 # order based on t-statistic
 bmdc.lps.res01.size_rank <- bmdc.lps.0v1.merge.cgi$CGI_SIZE.kb[order(bmdc.lps.0v1.merge.cgi$t0_t1.t, decreasing=TRUE)]
 bmdc.lps.res26.size_rank <- bmdc.lps.1v2.merge.cgi$CGI_SIZE.kb[order(bmdc.lps.1v2.merge.cgi$t1_t2.t, decreasing=TRUE)]
+bmdc.lps.res02.size_rank <- bmdc.lps.0v2.merge.cgi$CGI_SIZE.kb[order(bmdc.lps.0v2.merge.cgi$t0_t2.t, decreasing=TRUE)]
 
-bmdc.lps.sign.size_rank <- as.numeric(bmdc.lps.res01.size_rank < bmdc.lps.res26.size_rank)
-binom.test(sum(bmdc.lps.sign.size_rank), n=length(bmdc.lps.sign.size_rank),
+bmdc.lps.sign.size_rank <- as.numeric(bmdc.lps.res01.size_rank < 
+                                        bmdc.lps.res26.size_rank)
+binom.test(sum(bmdc.lps.sign.size_rank, na.rm=TRUE), n=length(bmdc.lps.sign.size_rank),
            alternative="greater")
+
+# test 0v1 Vs 0v2
+bmdc.lps.sign.size_rank.0v2 <- as.numeric(bmdc.lps.res01.size_rank < bmdc.lps.res02.size_rank)
+binom.test(sum(bmdc.lps.sign.size_rank.0v2, na.rm=TRUE), n=length(bmdc.lps.sign.size_rank.0v2),
+           alternative="greater")
+
+# test 1v2 Vs 0v2
+bmdc.lps.sign.size_rank.0v2 <- as.numeric(bmdc.lps.res02.size_rank < bmdc.lps.res26.size_rank)
+binom.test(sum(bmdc.lps.sign.size_rank.0v2, na.rm=TRUE), n=length(bmdc.lps.sign.size_rank.0v2),
+           alternative="greater")
+
 
 ###########
 ### PIC ###
@@ -642,29 +725,6 @@ lps.0h.sum <- do.call(cbind.data.frame,
 # merge with genomic features
 lps.0h.demerge <- merge(lps.0h.sum, bmdc.lps.de.res.0v1, by='gene_id')
 lps.0h.genomic <- merge(lps.0h.demerge, mouse.genomic.features, by.x='gene_id', by.y='GENE')
-
-### identify genes with systematic underdispersion <- probably mapping artefacts
-# try a kernal SVM to find the decision boundary
-# DBSCAN doesn't work, kernel SVM is supervised, need an unsupervised approach
-# model-based clustering?
-# set.seed(42)
-# mc.test <- Mclust(sqrt(lps.0h.genomic[, c("Mean", "CV2")]))
-# 
-# fviz_mclust(mc.test, "classification", palette="jco",
-#             geom="point", pointsize=1.5, xlab="Mean", ylab="CV2")
-# 
-# lps.0h.genomic$Mclust <- mc.test$classification
-
-# whilst some of these genes are no doubt genuinely functional,
-# the majority of them have a Gm- or ribosomal protein pseudogene designation
-# the offending genes are primarily in clusters 1, and 8
-# what are these genes?
-
-# plot(lps.0h.genomic$Mean,
-#      lps.0h.genomic$CV2,
-#      xlab="Mean expression", ylab=expression("CV"^2))
-# points(lps.0h.genomic$Mean[lps.0h.genomic$Mclust %in% c(1, 8)],
-#        lps.0h.genomic$CV2[lps.0h.genomic$Mclust %in% c(1, 8)], col='green')
 
 # split CGIs into size bins on quartiles
 lps.0h.genomic$CGI_SIZE.group <- as.character(cut(lps.0h.genomic$CGI_SIZE.kb,
@@ -1114,4 +1174,6 @@ ggsave(lps.0v1.heat,
        filename="~/Dropbox/Noise_genomics/Figures/ms_figures/BMDC_LPS-binom_heat.png",
        width=8.25, height=2.25, dpi=300)
 
-
+##################################
+# also check 0 vs 2 against 0v1? #
+##################################
