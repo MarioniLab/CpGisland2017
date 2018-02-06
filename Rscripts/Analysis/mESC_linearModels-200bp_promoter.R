@@ -1,13 +1,14 @@
 source("~/Dropbox/R_sessions/Noise/mESC_chromHMM.R")
-source("~/Dropbox/R_sessions/Noise/genomic_noise_features.R")
+source("~/Dropbox/R_sessions/Noise/genomic_noise_features_200bp.R")
 source("~/Dropbox/R_sessions/Noise/mESC_genomic_noise_features.R")
 
 library(ggplot2)
 library(robustbase)
 library(gtools)
+library(scales)
 source("~/Dropbox/R_sessions/GGMike/theme_mike.R")
 
-mesc.vars <- colnames(genomic.features)[2:16]
+mesc.vars <- colnames(genomic.features)[c(2:16, 18:21)]
 mesc.vars <- mesc.vars[!grepl(mesc.vars, pattern="(NMI)|(CGI_SIZE)|(cpg_)|(PHAST)")]
 
 mesc.genomic.vars <- paste(mesc.vars,
@@ -16,8 +17,8 @@ mesc.genomic.vars <- paste(mesc.vars,
 mesc.match <- merge(mesc.gene.summary, genomic.features,
                     by='GENE')
 
-# change TBP to a binary variable
-mesc.match$TBP.bin <- as.numeric(mesc.match$TBP > 0)
+# what about using the ranks?
+mesc.match$Noise.Rank <- order(mesc.match$CV2, decreasing=TRUE)
 #########################################
 ## univariate robust linear regression ##
 #########################################
@@ -33,7 +34,7 @@ mesc.var.names <- mesc.var.names[!grepl(mesc.var.names, pattern="(NMI)|(CGI_SIZE
 for(x in seq_along(mesc.var.names)){
   .variable <- paste(mesc.var.names[x], collapse=" + ")
   .glm.form <- as.formula(paste("Residual.CV2", .variable, sep=" ~ "))
-
+  
   m.rlm <- glm(.glm.form, data=mesc.match)
   m.robust <- summary(m.rlm)
   m.rlm.res <- as.data.frame(m.robust$coefficients)
@@ -70,11 +71,14 @@ mesc.rlm.df$Predictor[mesc.rlm.df$Predictor == "EXON_VARLENGTH"] <- "Exon length
 mesc.rlm.df$Tissue <- "ESC"
 mesc.rlm.df$Species <- "Mouse"
 
+effect.cols <- c("#62148f", "#878787", "#feaf10")
+names(effect.cols) <- c("Less", "NoEffect", "More")
+
 univar.plot <- ggplot(mesc.rlm.df,
-                        aes(x=reorder(Predictor, -STAT),
-                            y=STAT, fill=Direction)) +
+                      aes(x=reorder(Predictor, -STAT),
+                          y=STAT, fill=Direction)) +
   geom_point(alpha=0.55, shape=21, size=5) + theme_mike() +
-  scale_fill_manual(values=c("#62148f", "#feaf10", "#878787")) +
+  scale_fill_manual(values=effect.cols) +
   theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1)) +
   labs(x="Annotation", y="t-statistic") +
   guides(fill=FALSE) +
@@ -82,7 +86,7 @@ univar.plot <- ggplot(mesc.rlm.df,
   scale_y_continuous(limits=c(-50, 50))
 
 ggsave(univar.plot,
-       filename="~/Dropbox/Noise_genomics/Figures/ms_figures/mESC_univariateLM.png",
+       filename="~/Dropbox/Noise_genomics/Figures/ms_figures/mESC_univariateLM-200bp_promoter.png",
        height=4.75, width=6.75, dpi=300)
 
 
@@ -126,15 +130,15 @@ mesc.rlm.res$Tissue <- "ESC"
 mesc.rlm.res$Species <- "Mouse"
 
 write.table(mesc.rlm.res,
-            file="~/Dropbox/Noise_genomics/Model_results/mouse_ESC_multivariateRLM.tsv",
+            file="~/Dropbox/Noise_genomics/Model_results/mouse_ESC_multivariateRLM-200bp_promoter.tsv",
             quote=FALSE, row.names=FALSE, sep="\t")
 
 
 multivar.plot <- ggplot(mesc.rlm.res,
-                      aes(x=reorder(Predictor, -STAT),
-                          y=STAT, fill=Direction)) +
+                        aes(x=reorder(Predictor, -STAT),
+                            y=STAT, fill=Direction)) +
   geom_point(alpha=0.55, shape=21, size=5) + theme_mike() +
-  scale_fill_manual(values=c("#62148f", "#feaf10", "#878787")) +
+  scale_fill_manual(values=effect.cols) +
   theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1)) +
   labs(x="Annotation", y="t-statistic") +
   guides(fill=FALSE) +
@@ -142,7 +146,7 @@ multivar.plot <- ggplot(mesc.rlm.res,
   scale_y_continuous(limits=c(-50, 50))
 
 ggsave(multivar.plot,
-       filename="~/Dropbox/Noise_genomics/Figures/ms_figures/mESC_multiivariateLM.png",
+       filename="~/Dropbox/Noise_genomics/Figures/ms_figures/mESC_multiivariateLM-200bp_promoter.png",
        height=4.75, width=6.75, dpi=300)
 
 # plot the uni- and multivariate on the same graph?
@@ -169,15 +173,15 @@ all.plot <- ggplot(mesc.rlm.all,
   scale_y_continuous(limits=c(-25, 25), oob=squish)
 
 ggsave(all.plot,
-       filename="~/Dropbox/Noise_genomics/Figures/ms_figures/mESC_allLM.png",
+       filename="~/Dropbox/Noise_genomics/Figures/ms_figures/mESC_allLM-200bp_promoter.png",
        height=5.6, width=7.75, dpi=300)
 
 ##############################
 ## Plot CpG islands vs rCV2 ##
 ##############################
 mesc.match$CpGisland <- factor(mesc.match$N_CpG,
-                                levels=c(0, 1),
-                                labels=c("Non-CpG island", "CpG island"))
+                               levels=c(0, 1),
+                               labels=c("Non-CpG island", "CpG island"))
 cpg.cols <- c("#027E00", "#00DDEC")
 names(cpg.cols) <- levels(mesc.match$CpGisland)
 
@@ -194,7 +198,7 @@ tc_cpg <- ggplot(mesc.match, aes(x=CpGisland, y=Residual.CV2, colour=CpGisland))
         axis.title=element_text(size=16))
 
 ggsave(tc_cpg,
-       filename="~/Dropbox/Noise_genomics/Figures/ms_figures/mESC_boxplot_CpGislands-overdispersion.png",
+       filename="~/Dropbox/Noise_genomics/Figures/ms_figures/mESC_boxplot_CpGislands-overdispersion-200bp_promoter.png",
        height=3.75, width=4.75, dpi=300)
 
 tc_cpgMe <- ggplot(mesc.match, aes(x=CpGisland, y=Mean, colour=CpGisland)) + 
@@ -208,5 +212,24 @@ tc_cpgMe <- ggplot(mesc.match, aes(x=CpGisland, y=Mean, colour=CpGisland)) +
   guides(colour=FALSE)
 
 ggsave(tc_cpgMe,
-       filename="~/Dropbox/Noise_genomics/Figures/ms_figures/mESC_boxplot_CpGislands-mean.png",
+       filename="~/Dropbox/Noise_genomics/Figures/ms_figures/mESC_boxplot_CpGislands-mean-200bp_promoter.png",
        height=3.75, width=4.75, dpi=300)
+
+
+# create a toy example
+toy <- ggplot(mesc.rlm.all,
+              aes(x=reorder(Predictor, -STAT),
+                  y=STAT, fill=Direction, shape=Model)) +
+  geom_hline(mapping=aes(yintercept=0), linetype="dashed", colour="grey") +
+  theme_mike() +
+  scale_fill_manual(values=c("#62148f", "#feaf10", "#878787")) +
+  scale_shape_manual(values=c(21, 23)) +
+  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1),
+        axis.text=element_text(size=16)) +
+  labs(x="Annotation", y="t-statistic") +
+  guides(fill=FALSE, shape=FALSE) +
+  scale_y_continuous(limits=c(-25, 25), oob=squish)
+
+ggsave(toy, filename="~/Dropbox/Noise_genomics/Figures/ms_figures/Toy_model-plot.png",
+       height=5.6, width=6.75, dpi=300)
+
