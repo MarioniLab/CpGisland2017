@@ -40,7 +40,25 @@ useForFit <- mesc.gene.summary$Mean <= 0.1
 fit <- glmgam.fit(cbind(a0 = 1, a1tilde=1/mesc.gene.summary$Mean[!useForFit]), 
                   mesc.gene.summary$CV2[!useForFit])
 
+linear.fit <- glm.fit(cbind(a0 = 1, a1tilde=1/mesc.gene.summary$Mean[!useForFit]), 
+                      mesc.gene.summary$CV2[!useForFit], family=gaussian)
+# assess the quality of the fit by checking how much of the variance of the log CV^2
+# is explained by the fit, and how much by the sampling variance of the estimator
+# as recommended in Brennecke et al.
+residualFit <- var(log(fitted.values(fit)) - log(mesc.gene.summary$CV2[!useForFit]))
+totalVar <- var(log(mesc.gene.summary$CV2[!useForFit]))
+
+# explained variance
+1 - (residualFit/totalVar)
+
 mesc.gene.summary$Residual.CV2[!useForFit] <- abs(mesc.gene.summary$CV2[!useForFit] - fitted.values(fit))
+
+png("~/Dropbox/Noise_genomics/Figures/ms_figures/Supplementary_mESC_rCV2_density.png",
+    height=5.75, width=5.75, res=300, units="in")
+par(mar=c(4.6, 4.6, 2.1, 1.1))
+plot(density(na.omit(mesc.gene.summary$Residual.CV2)), xlab=expression(paste("Residual CV"^2)), main="", cex.axis=1.7, lwd=2,
+     cex.lab=2)
+dev.off()
 
 png("~/Dropbox/Noise_genomics/Figures/ms_figures/Supplementary_mESC_dispersion-CV2Vsalpha.png",
      height=7.25, width=5.75, res=300, units="in")
