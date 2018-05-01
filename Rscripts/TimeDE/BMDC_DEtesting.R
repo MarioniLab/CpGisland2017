@@ -724,7 +724,9 @@ lps.0h.sum <- do.call(cbind.data.frame,
 
 # merge with genomic features
 lps.0h.demerge <- merge(lps.0h.sum, bmdc.lps.de.res.0v1, by='gene_id')
+lps.1h.demerge <- merge(lps.0h.demerge, bmdc.lps.de.res.1v2, by='gene_id')
 lps.0h.genomic <- merge(lps.0h.demerge, mouse.genomic.features, by.x='gene_id', by.y='GENE')
+lps.1h.genomic <- merge(lps.1h.demerge, mouse.genomic.features, by.x='gene_id', by.y='GENE')
 
 # split CGIs into size bins on quartiles
 lps.0h.genomic$CGI_SIZE.group <- as.character(cut(lps.0h.genomic$CGI_SIZE.kb,
@@ -737,12 +739,29 @@ lps.0h.genomic$CGI_SIZE.group <- factor(lps.0h.genomic$CGI_SIZE.group,
                                                          "(2,4.585]"),
                                                 levels=c("Absent", "(0,0.5]", "(0.5,1]", "(1,1.5]",  "(1.5,2]",
                                                          "(2,4.585]"))
+
+# split CGIs into size bins on quartiles
+lps.1h.genomic$CGI_SIZE.group <- as.character(cut(lps.1h.genomic$CGI_SIZE.kb,
+                                                  breaks=c(0.5, 1.0, 1.5, 2.0)))
+lps.1h.genomic$CGI_SIZE.group[(lps.1h.genomic$CGI_SIZE.kb <= 0.5)] <- "(0,0.5]"
+lps.1h.genomic$CGI_SIZE.group[(lps.1h.genomic$CGI_SIZE.kb > 2)] <- "(2,4.585]"
+lps.1h.genomic$CGI_SIZE.group[is.na(lps.1h.genomic$CGI_SIZE.group) | lps.1h.genomic$CGI_SIZE.kb == 0] <- "Absent"
+lps.1h.genomic$CGI_SIZE.group <- factor(lps.1h.genomic$CGI_SIZE.group,
+                                        labels=c("Absent", "(0,0.5]", "(0.5,1]", "(1,1.5]",  "(1.5,2]",
+                                                 "(2,4.585]"),
+                                        levels=c("Absent", "(0,0.5]", "(0.5,1]", "(1,1.5]",  "(1.5,2]",
+                                                 "(2,4.585]"))
 # exclude the bad genes
 # bmdc.bad_genes <- as.character(lps.0h.genomic$gene_id[lps.0h.genomic$Mclust %in% c(1, 8)])
 # lps.0h.genomic <- lps.0h.genomic[!lps.0h.genomic$gene_id %in% bmdc.bad_genes,]
 
 # remove the absent factor level before running rLM
 lps.0h.genomic$CGI_SIZE.group <- factor(lps.0h.genomic$CGI_SIZE.group,
+                                        labels=c("(0,0.5]", "(0.5,1]", "(1,1.5]",  "(1.5,2]", "(2,4.585]"),
+                                        levels=c("(0,0.5]", "(0.5,1]", "(1,1.5]",  "(1.5,2]", "(2,4.585]"))
+
+# remove the absent factor level before running rLM
+lps.1h.genomic$CGI_SIZE.group <- factor(lps.1h.genomic$CGI_SIZE.group,
                                         labels=c("(0,0.5]", "(0.5,1]", "(1,1.5]",  "(1.5,2]", "(2,4.585]"),
                                         levels=c("(0,0.5]", "(0.5,1]", "(1,1.5]",  "(1.5,2]", "(2,4.585]"))
 
@@ -764,7 +783,7 @@ lps.cv2.by.cgi <- ggplot(lps.0h.genomic[lps.0h.genomic$N_CpG == 1,],
   scale_colour_manual(values=c("darkblue", "yellow", "darkred")) +
   theme(axis.text.x=element_text(angle=90, vjust=0.5)) +
   labs(x="CpG island size interval (kb)",
-       y=expression(paste("CV"^2))) +
+       y=expression(paste("Unstimulated CV"^2))) +
   guides(colour=FALSE, fill=FALSE) +
   theme(axis.text=element_text(size=16),
         axis.title=element_text(size=16))
@@ -786,7 +805,7 @@ lps.rcv2.by.cgi <- ggplot(lps.0h.genomic[lps.0h.genomic$N_CpG == 1,],
   scale_colour_manual(values=c("darkblue", "yellow", "darkred")) +
   theme(axis.text.x=element_text(angle=90, vjust=0.5)) +
   labs(x="CpG island size interval (kb)",
-       y=expression(paste("Residual CV"^2))) +
+       y=expression(paste("Unstimulated Residual CV"^2))) +
   guides(colour=FALSE, fill=FALSE) +
   theme(axis.text=element_text(size=16),
         axis.title=element_text(size=16))
@@ -821,23 +840,49 @@ ggsave(lps.mean.by.cgi,
 lps.cv2.by.non_cgi <- ggplot(lps.0h.genomic[lps.0h.genomic$N_CpG == 0,],
                           aes(y=rCV2, x=CGI_SIZE.group, fill=t0_t1.Diff,
                               colour=t0_t1.Diff, group=t0_t1.Diff)) +
+  #geom_boxplot(colour="black", alpha=0.4) + 
   geom_jitter(alpha=0.5, 
               position=position_jitterdodge(jitter.width=0.5)) +
-  #geom_boxplot(colour="black") + 
   theme_mike() +
   stat_summary(fun.y=mean, colour="grey", geom="point", size=4,
                aes(group=t0_t1.Diff), position=position_dodge(width=0.75)) + 
   scale_colour_manual(values=c("darkblue", "yellow", "darkred")) +
+  scale_fill_manual(values=c("darkblue", "yellow", "darkred")) +
   theme(axis.text.x=element_text(angle=90, vjust=0.5)) +
-  labs(x="CpG island size interval (kb)",
-       y=expression(paste("Residual CV"^2))) +
+  labs(x="Differential Expression",
+       y=expression(paste("Unstimulated Residual CV"^2))) +
   guides(colour=FALSE, fill=FALSE) +
   theme(axis.text=element_text(size=16),
+        axis.text.x=element_blank(),
         axis.title=element_text(size=16))
 
 ggsave(lps.cv2.by.non_cgi,
        filename="~/Dropbox/Noise_genomics/Figures/ms_figures/BMDC_LPS-nonCGI-residualCV2-scatter.png",
        width=7.75, height=5.25, dpi=300)
+
+
+
+### plot the t1_t2.Diff as well to see if noisy non-CGI promtors respond later
+# ggplot(lps.1h.genomic[lps.1h.genomic$N_CpG == 0,],
+#        aes(y=rCV2, x=CGI_SIZE.group, fill=t1_t2.Diff,
+#            colour=t1_t2.Diff, group=t1_t2.Diff)) +
+#   #geom_boxplot(colour="black", alpha=0.4) + 
+#   geom_jitter(alpha=0.5, 
+#               position=position_jitterdodge(jitter.width=0.5)) +
+#   theme_mike() +
+#   stat_summary(fun.y=mean, colour="grey", geom="point", size=4,
+#                aes(group=t0_t1.Diff), position=position_dodge(width=0.75)) + 
+#   scale_colour_manual(values=c("darkblue", "yellow", "darkred")) +
+#   scale_fill_manual(values=c("darkblue", "yellow", "darkred")) +
+#   theme(axis.text.x=element_text(angle=90, vjust=0.5)) +
+#   labs(x="Differential Expression",
+#        y=expression(paste("Unstimulated Residual CV"^2))) +
+#   guides(colour=FALSE, fill=FALSE) +
+#   theme(axis.text=element_text(size=16),
+#         axis.text.x=element_blank(),
+#         axis.title=element_text(size=16))
+
+
 
 
 lps.cv2.by.cgi.cdf <- ggplot(lps.0h.genomic[lps.0h.genomic$N_CpG == 1,],
@@ -849,7 +894,7 @@ lps.cv2.by.cgi.cdf <- ggplot(lps.0h.genomic[lps.0h.genomic$N_CpG == 1,],
   scale_colour_manual(values=c("darkblue", "yellow", "darkred")) +
   theme(axis.text.x=element_text(angle=90, vjust=0.5)) +
   labs(x="CpG island size interval (kb)",
-       y=expression(paste("CV"^2))) +
+       y=expression(paste("Unstimulated CV"^2))) +
   facet_wrap(~CGI_SIZE.group,
              ncol=3) +
   guides(colour=FALSE, fill=FALSE)
@@ -980,7 +1025,7 @@ pic.cv2.by.cgi <- ggplot(pic.0h.genomic[pic.0h.genomic$N_CpG == 1,],
   scale_colour_manual(values=c("darkblue", "yellow", "darkred")) +
   theme(axis.text.x=element_text(angle=90, vjust=0.5)) +
   labs(x="CpG island size interval (kb)",
-       y=expression(paste("CV"^2)))
+       y=expression(paste("Unstimulated CV"^2)))
 
 pic.cv2.by.cgi.cdf <- ggplot(pic.0h.genomic[pic.0h.genomic$N_CpG == 1,],
        aes(x=CV2,
@@ -991,7 +1036,7 @@ pic.cv2.by.cgi.cdf <- ggplot(pic.0h.genomic[pic.0h.genomic$N_CpG == 1,],
   scale_colour_manual(values=c("darkblue", "yellow", "darkred")) +
   theme(axis.text.x=element_text(angle=90, vjust=0.5)) +
   labs(x="CpG island size interval (kb)",
-       y=expression(paste("CV"^2))) +
+       y=expression(paste("Unstimulated CV"^2))) +
   facet_wrap(~CGI_SIZE.group,
              ncol=3)
 
@@ -1076,7 +1121,7 @@ pam.cv2.by.cgi <- ggplot(pam.0h.genomic[pam.0h.genomic$N_CpG == 1,],
   scale_colour_manual(values=c("darkblue", "yellow", "darkred")) +
   theme(axis.text.x=element_text(angle=90, vjust=0.5)) +
   labs(x="CpG island size interval (kb)",
-       y=expression(paste("CV"^2)))
+       y=expression(paste("Unstimulated CV"^2)))
 
 pam.rcv2.by.cgi <- ggplot(pam.0h.genomic[pam.0h.genomic$N_CpG == 1,],
                          aes(y=rCV2, x=CGI_SIZE.group, fill=t0_t1.Diff,
@@ -1089,7 +1134,7 @@ pam.rcv2.by.cgi <- ggplot(pam.0h.genomic[pam.0h.genomic$N_CpG == 1,],
   scale_colour_manual(values=c("darkblue", "yellow", "darkred")) +
   theme(axis.text.x=element_text(angle=90, vjust=0.5)) +
   labs(x="CpG island size interval (kb)",
-       y=expression(paste("Residual CV"^2)))
+       y=expression(paste("Unstimulated Residual CV"^2)))
 
 pam.cv2.by.cgi.cdf <- ggplot(pam.0h.genomic[pam.0h.genomic$N_CpG == 1,],
        aes(x=CV2,
@@ -1100,7 +1145,7 @@ pam.cv2.by.cgi.cdf <- ggplot(pam.0h.genomic[pam.0h.genomic$N_CpG == 1,],
   scale_colour_manual(values=c("darkblue", "yellow", "darkred")) +
   theme(axis.text.x=element_text(angle=90, vjust=0.5)) +
   labs(x="CpG island size interval (kb)",
-       y=expression(paste("CV"^2))) +
+       y=expression(paste("Unstimulated CV"^2))) +
   facet_wrap(~CGI_SIZE.group,
              ncol=3)
 

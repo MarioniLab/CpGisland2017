@@ -180,32 +180,40 @@ tcell.match$CpGisland <- factor(tcell.match$N_CpG,
 cpg.cols <- c("#027E00", "#00DDEC")
 names(cpg.cols) <- levels(tcell.match$CpGisland)
 
-tc_cpg <- ggplot(tcell.match, aes(x=CpGisland, y=Residual.CV2, colour=CpGisland)) + 
+tc_cpg <- ggplot(tcell.match, aes(x=CpGisland, y=Residual.CV2, fill=CpGisland)) + 
   theme_mike() + 
-  geom_jitter(position=position_jitterdodge(jitter.height=0,
-                                            jitter.width=1.5),
-              alpha=0.7) +
-  geom_boxplot(width=0.5, fill='white', colour='black') +
-  scale_colour_manual(values=cpg.cols) +
+  # geom_jitter(position=position_jitterdodge(jitter.height=0,
+  #                                           jitter.width=1.5),
+  #             alpha=0.7) +
+  geom_boxplot(width=0.5, colour='black') +
+  scale_fill_manual(values=cpg.cols) +
   labs(x="Overlapping CpG island", y=expression(paste("Residual CV"^2))) +
-  guides(colour=FALSE)  +
-  theme(axis.text=element_text(size=16),
-        axis.title=element_text(size=16))
+  guides(fill=FALSE) +
+  theme(axis.text=element_text(size=18),
+        #axis.text.y=element_text(size=18),
+        #axis.title.y=element_text(size=18),
+        axis.title=element_text(size=18)) +
+  scale_y_continuous(limits=c(0, 10), oob=squish)
 
 ggsave(tc_cpg,
        filename="~/Dropbox/Noise_genomics/Figures/ms_figures/Tcell_boxplot_CpGislands-overdispersion.png",
-       height=3.75, width=4.75, dpi=300)
+       height=4.75, width=4.75, dpi=300)
 
-tc_cpgMe <- ggplot(tcell.match, aes(x=CpGisland, y=Mean, colour=CpGisland)) + 
+tc_cpgMe <- ggplot(tcell.match, aes(x=CpGisland, y=Mean, fill=CpGisland)) + 
   theme_mike() + 
-  geom_jitter(position=position_jitterdodge(jitter.height=0,
-                                            jitter.width=1.5),
-              alpha=0.7) +
-  geom_boxplot(width=0.5, fill='white', colour='black') +
-  scale_colour_manual(values=cpg.cols) +
+  # geom_jitter(position=position_jitterdodge(jitter.height=0,
+  #                                           jitter.width=1.5),
+  #             alpha=0.7) +
+  geom_boxplot(width=0.5, colour='black') +
+  scale_fill_manual(values=cpg.cols) +
   labs(x="Overlapping CpG island", y=expression(paste("Mean log"[2], " Expression"))) +
-  guides(colour=FALSE)
+  guides(fill=FALSE) +
+  theme(axis.text=element_text(size=18),
+        axis.text.y=element_text(size=18),
+        axis.title.y=element_text(size=18),
+        axis.title=element_text(size=18)) +
+  scale_y_continuous(limits=c(0, 15), oob=squish)
 
 ggsave(tc_cpgMe,
        filename="~/Dropbox/Noise_genomics/Figures/ms_figures/Tcell_boxplot_CpGislands-mean.png",
-       height=3.75, width=4.75, dpi=300)
+       height=4.75, width=4.75, dpi=300)
